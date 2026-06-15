@@ -57,14 +57,16 @@ GRANT controleur_cnil      TO taj_cnil;
 -- 3. GRANT DATABASE ACCESS
 -- ============================================================================
 
-GRANT CONNECT ON DATABASE taj TO
-    taj_agent,
-    taj_opj,
-    taj_magistrat,
-    taj_analyst,
-    taj_admin,
-    taj_auditor,
-    taj_cnil;
+-- Sur la base courante (taj, blackvault, …) — pas de nom codé en dur.
+DO $$
+BEGIN
+    EXECUTE format(
+        'GRANT CONNECT ON DATABASE %I TO '
+        'taj_agent, taj_opj, taj_magistrat, taj_analyst, '
+        'taj_admin, taj_auditor, taj_cnil',
+        current_database()
+    );
+END $$;
 
 -- ============================================================================
 -- 4. ENSURE INHERITANCE (group role privileges flow down to login user)
@@ -130,9 +132,15 @@ ALTER ROLE admin_systeme          LOGIN PASSWORD 'admin_pwd';
 ALTER ROLE auditeur               LOGIN PASSWORD 'auditor_pwd';
 ALTER ROLE controleur_cnil        LOGIN PASSWORD 'cnil_pwd';
 
-GRANT CONNECT ON DATABASE taj TO
-    agent_saisie, opj, magistrat, analyste_renseignement,
-    admin_systeme, auditeur, controleur_cnil;
+DO $$
+BEGIN
+    EXECUTE format(
+        'GRANT CONNECT ON DATABASE %I TO '
+        'agent_saisie, opj, magistrat, analyste_renseignement, '
+        'admin_systeme, auditeur, controleur_cnil',
+        current_database()
+    );
+END $$;
 
 -- Niveau BLP par défaut sur les rôles de groupe (cohérent avec les taj_*).
 -- Sert uniquement si on navigue sans session applicative ; sinon l'app fixe
