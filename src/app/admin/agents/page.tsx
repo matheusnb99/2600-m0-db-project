@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, Badge, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 import type { Agent, RoleType } from "@/types";
 
 export default function AgentsPage() {
@@ -12,6 +13,7 @@ export default function AgentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const perms = usePermissions();
 
   const roles: RoleType[] = [
     "agent_saisie",
@@ -93,15 +95,17 @@ export default function AgentsPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Gestion des Agents
           </h1>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditingAgent(null);
-              setShowForm(true);
-            }}
-          >
-            ➕ Nouvel agent
-          </Button>
+          {perms?.agents && (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditingAgent(null);
+                setShowForm(true);
+              }}
+            >
+              ➕ Nouvel agent
+            </Button>
+          )}
         </div>
 
         {/* Form */}

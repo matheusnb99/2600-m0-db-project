@@ -12,15 +12,30 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = getSessionContext(request);
+  const { id } = await params;
+
+  // A related table the connected role isn't granted (e.g. `biometrie` for
+  // agent_saisie) must NOT blank the whole sheet — degrade that section to
+  // empty. Only `permission denied` (42501) is swallowed; other errors bubble.
+  const safe = async <T>(p: Promise<T[]>): Promise<T[]> => {
+    try {
+      return await p;
+    } catch (e) {
+      if ((e as { code?: string }).code === "42501") return [];
+      throw e;
+    }
+  };
+
   try {
-    // Fetch main person record
+    // Main person record — essential. If the role can't read `personnes` at
+    // all, this 403s the page (correct).
     const person = await queryOne(
       `SELECT
         id, nom, prenom, date_naissance, lieu_naissance, nationalite, sexe,
         niveau_classification_id, statut, numero_taj, date_creation, date_modification
        FROM personnes
        WHERE id = $1`,
-      [(await params).id],
+      [id],
       session
     );
 
@@ -31,67 +46,74 @@ export async function GET(
       );
     }
 
-    // Fetch aliases
-    const aliases = await query(
-      `SELECT id, alias_nom, alias_prenom, type, date_creation
-       FROM aliases
-       WHERE personne_id = $1
-       ORDER BY date_creation DESC`,
-      [(await params).id],
-      session
+    const aliases = await safe(
+      query(
+        `SELECT id, alias_nom, alias_prenom, type, date_creation
+         FROM aliases
+         WHERE personne_id = $1
+         ORDER BY date_creation DESC`,
+        [id],
+        session
+      )
     );
 
-    // Fetch addresses
-    const addresses = await query(
-      `SELECT id, adresse_ligne1, adresse_ligne2, code_postal, ville, pays,
-              type, date_debut, date_fin, date_creation
-       FROM adresses
-       WHERE personne_id = $1
-       ORDER BY date_fin DESC NULLS FIRST, date_debut DESC`,
-      [(await params).id],
-      session
+    const addresses = await safe(
+      query(
+        `SELECT id, adresse_ligne1, adresse_ligne2, code_postal, ville, pays,
+                type, date_debut, date_fin, date_creation
+         FROM adresses
+         WHERE personne_id = $1
+         ORDER BY date_fin DESC NULLS FIRST, date_debut DESC`,
+        [id],
+        session
+      )
     );
 
-    // Fetch phones
-    const phones = await query(
-      `SELECT id, numero, type, actif, date_creation
-       FROM telephones
-       WHERE personne_id = $1
-       ORDER BY actif DESC, date_creation DESC`,
-      [(await params).id],
-      session
+    const phones = await safe(
+      query(
+        `SELECT id, numero, type, actif, date_creation
+         FROM telephones
+         WHERE personne_id = $1
+         ORDER BY actif DESC, date_creation DESC`,
+        [id],
+        session
+      )
     );
 
-    // Fetch biometrics (count only, don't return data for security)
-    const biometrics = await query(
-      `SELECT type, COUNT(*) as count
-       FROM biometrie
-       WHERE personne_id = $1
-       GROUP BY type`,
-      [(await params).id],
-      session
+    // Biometrics — restricted to opj / magistrat / analyste_renseignement.
+    const biometrics = await safe(
+      query(
+        `SELECT type, COUNT(*) as count
+         FROM biometrie
+         WHERE personne_id = $1
+         GROUP BY type`,
+        [id],
+        session
+      )
     );
 
-    // Fetch cases involvement
-    const cases = await query(
-      `SELECT DISTINCT ap.affaire_id, ap.role, a.numero_pv, a.statut, a.date_ouverture
-       FROM affaire_personnes ap
-       JOIN affaires a ON a.id = ap.affaire_id
-       WHERE ap.personne_id = $1
-       ORDER BY a.date_ouverture DESC
-       LIMIT 10`,
-      [(await params).id],
-      session
+    const cases = await safe(
+      query(
+        `SELECT DISTINCT ap.affaire_id, ap.role, a.numero_pv, a.statut, a.date_ouverture
+         FROM affaire_personnes ap
+         JOIN affaires a ON a.id = ap.affaire_id
+         WHERE ap.personne_id = $1
+         ORDER BY a.date_ouverture DESC
+         LIMIT 10`,
+        [id],
+        session
+      )
     );
 
-    // Fetch alerts/signalements
-    const alerts = await query(
-      `SELECT id, type, motif, date_emission, date_expiration, actif, priorite
-       FROM signalements
-       WHERE personne_id = $1 AND actif = true
-       ORDER BY priorite DESC, date_emission DESC`,
-      [(await params).id],
-      session
+    const alerts = await safe(
+      query(
+        `SELECT id, type, motif, date_emission, date_expiration, actif, priorite
+         FROM signalements
+         WHERE personne_id = $1 AND actif = true
+         ORDER BY priorite DESC, date_emission DESC`,
+        [id],
+        session
+      )
     );
 
     return NextResponse.json(

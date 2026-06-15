@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Card, Badge, Button, Input, Select } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
+import { usePermissions } from "@/lib/use-permissions";
 import type { Role, RoleType, Classification } from "@/types";
 
 export default function RolesPage() {
+  const perms = usePermissions();
   const [roles, setRoles] = useState<Role[]>([
     {
       id: 1,
@@ -128,15 +130,17 @@ export default function RolesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Gestion des Rôles RBAC
           </h1>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditingRole(null);
-              setShowForm(true);
-            }}
-          >
-            ➕ Nouveau rôle
-          </Button>
+          {perms?.roles && (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditingRole(null);
+                setShowForm(true);
+              }}
+            >
+              ➕ Nouveau rôle
+            </Button>
+          )}
         </div>
 
         {/* Classification Levels Reference */}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, Badge, Button, Input, Select, AccessDenied } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 
 export default function AffairesPage() {
   const [affaires, setAffaires] = useState<any[]>([]);
@@ -12,6 +13,7 @@ export default function AffairesPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statut, setStatut] = useState("en_cours");
+  const perms = usePermissions();
 
   useEffect(() => {
     const fetchAffaires = async () => {
@@ -53,9 +55,11 @@ export default function AffairesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Affaires
           </h1>
-          <Link href="/affaires/create">
-            <Button variant="primary">➕ Nouvelle affaire</Button>
-          </Link>
+          {perms?.affaires && (
+            <Link href="/affaires/create">
+              <Button variant="primary">➕ Nouvelle affaire</Button>
+            </Link>
+          )}
         </div>
 
         {/* Filters */}

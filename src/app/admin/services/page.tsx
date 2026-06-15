@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, Badge, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 import type { Service, ServiceType } from "@/types";
 
 export default function ServicesPage() {
@@ -12,6 +13,7 @@ export default function ServicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const perms = usePermissions();
 
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -96,15 +98,17 @@ export default function ServicesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Gestion des Services
           </h1>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditingService(null);
-              setShowForm(true);
-            }}
-          >
-            ➕ Nouveau service
-          </Button>
+          {perms?.services && (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditingService(null);
+                setShowForm(true);
+              }}
+            >
+              ➕ Nouveau service
+            </Button>
+          )}
         </div>
 
         {/* Form */}

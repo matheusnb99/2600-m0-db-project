@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, Badge, Button, Input, Select, AccessDenied } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 
 export default function SignalementsPage() {
   const [signalements, setSignalements] = useState<any[]>([]);
@@ -12,6 +13,7 @@ export default function SignalementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState("all");
   const [activeOnly, setActiveOnly] = useState(true);
+  const perms = usePermissions();
 
   useEffect(() => {
     const fetchSignalements = async () => {
@@ -64,9 +66,11 @@ export default function SignalementsPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Signalements
           </h1>
-          <Link href="/signalements/create">
-            <Button variant="primary">🚨 Nouveau signalement</Button>
-          </Link>
+          {perms?.signalements && (
+            <Link href="/signalements/create">
+              <Button variant="primary">🚨 Nouveau signalement</Button>
+            </Link>
+          )}
         </div>
 
         {/* Filters */}
