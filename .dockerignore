@@ -1,0 +1,23 @@
+# Build artefacts & deps (rebuilt inside the image)
+node_modules
+.next
+.git
+.gitignore
+
+# Secrets / local env — NEVER bake into the image (injected at runtime)
+.env
+.env.*
+!.env.example
+
+# Docker / docs
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.md
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
+npm-debug.log*
+pnpm-debug.log*

@@ -1,0 +1,175 @@
+# ============================================================================
+# BLACKVAULT / TAJ — un microservice par rôle PostgreSQL
+# ----------------------------------------------------------------------------
+# Même image pour tous les services ; seule la chaîne de connexion (DB_USER /
+# DB_PASSWORD) change → c'est le SGBD (RBAC + RLS) qui isole chaque service.
+#
+#   docker compose up -d --build        # construit l'image une fois, lance tout
+#   docker compose up -d agent opj      # ne lance que ces deux services
+#
+# Pour alléger une VM trop juste : COMMENTER le bloc d'un service (de sa ligne
+# "nom:" jusqu'à la fin de son bloc). Chaque service est indépendant.
+#
+# Variables lues depuis ./.env (interpolation Compose, PAS injectées telles
+# quelles dans les conteneurs) : AUTH_DB_PASSWORD, JWT_SECRET, DB_HOST, etc.
+# ----------------------------------------------------------------------------
+# Pré-requis côté PostgreSQL (la base tourne sur l'HÔTE, hors compose) :
+#   - listen_addresses inclut l'interface docker (ex. '*' ou l'IP du bridge)
+#   - pg_hba.conf autorise l'auth par mot de passe depuis le sous-réseau docker
+#     (ex. `host all all 172.16.0.0/12 scram-sha-256`)
+#   - les rôles de connexion existent en LOGIN (script 10) avec leurs mots de passe
+# ============================================================================
+
+name: blackvault
+
+# --- Configuration commune à tous les services (durcissement inclus) --------
+x-site: &site
+  image: blackvault-site:latest
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      NODE_VERSION: "22"
+  restart: unless-stopped
+
+  # Sécurité
+  read_only: true                 # racine en lecture seule
+  security_opt:
+    - no-new-privileges:true      # interdit l'escalade de privilèges
+  cap_drop:
+    - ALL                         # aucune capability Linux
+  tmpfs:
+    - /tmp
+  volumes:
+    - type: tmpfs                 # cache Next inscriptible sans casser read_only
+      target: /app/.next/cache
+      tmpfs:
+        mode: 01777
+
+  # Limites de ressources (≈ pour tenir plusieurs services sur une seule VM)
+  deploy:
+    resources:
+      limits:
+        memory: 256M
+        cpus: "0.50"
+      reservations:
+        memory: 96M
+
+  # Accès au PostgreSQL de l'hôte depuis le conteneur
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+  healthcheck:
+    test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+
+# --- Variables d'environnement communes (auth + réseau base) ----------------
+x-db-env: &db-env
+  NODE_ENV: production
+  # En conteneur, la base est sur l'HÔTE → host.docker.internal (mappé via
+  # extra_hosts: host-gateway). On NE retombe PAS sur DB_HOST de ./.env (qui
+  # vaut "localhost" pour le mode dev non-docker). Pour une base distante,
+  # mettre DB_HOST_CONTAINER=<ip> dans ./.env.
+  DB_HOST: ${DB_HOST_CONTAINER:-host.docker.internal}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-taj}
+  # Pool AUTH (login) — identité privilégiée, partagée. En prod stricte, ne le
+  # mettre que sur UN service d'auth ; ici on garde simple pour la démo.
+  AUTH_DB_USER: ${AUTH_DB_USER:-postgres}
+  AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?defini AUTH_DB_PASSWORD dans ./.env}
+  JWT_SECRET: ${JWT_SECRET:?defini JWT_SECRET dans ./.env}
+
+services:
+  # ==========================================================================
+  # agent_saisie — habilitation CD — http://VM:3001
+  # ==========================================================================
+  agent:
+    <<: *site
+    container_name: blackvault-agent
+    environment:
+      <<: *db-env
+      DB_USER: agent_saisie
+      DB_PASSWORD: ${PWD_AGENT:-agent_pwd}
+    ports:
+      - "3001:3000"
+
+  # ==========================================================================
+  # opj — habilitation SD — http://VM:3002
+  # ==========================================================================
+  opj:
+    <<: *site
+    container_name: blackvault-opj
+    environment:
+      <<: *db-env
+      DB_USER: opj
+      DB_PASSWORD: ${PWD_OPJ:-opj_pwd}
+    ports:
+      - "3002:3000"
+
+  # ==========================================================================
+  # magistrat — habilitation TSD — http://VM:3003
+  # ==========================================================================
+  magistrat:
+    <<: *site
+    container_name: blackvault-magistrat
+    environment:
+      <<: *db-env
+      DB_USER: magistrat
+      DB_PASSWORD: ${PWD_MAGISTRAT:-mag_pwd}
+    ports:
+      - "3003:3000"
+
+  # ==========================================================================
+  # analyste_renseignement — habilitation TSD — http://VM:3004
+  # ==========================================================================
+  analyst:
+    <<: *site
+    container_name: blackvault-analyst
+    environment:
+      <<: *db-env
+      DB_USER: analyste_renseignement
+      DB_PASSWORD: ${PWD_ANALYST:-analyst_pwd}
+    ports:
+      - "3004:3000"
+
+  # ==========================================================================
+  # admin_systeme — maintenance (NC) — http://VM:3005
+  # ==========================================================================
+  admin:
+    <<: *site
+    container_name: blackvault-admin
+    environment:
+      <<: *db-env
+      DB_USER: admin_systeme
+      DB_PASSWORD: ${PWD_ADMIN:-admin_pwd}
+    ports:
+      - "3005:3000"
+
+  # ==========================================================================
+  # auditeur — vues anonymisées — http://VM:3006
+  # ==========================================================================
+  auditor:
+    <<: *site
+    container_name: blackvault-auditor
+    environment:
+      <<: *db-env
+      DB_USER: auditeur
+      DB_PASSWORD: ${PWD_AUDITOR:-auditor_pwd}
+    ports:
+      - "3006:3000"
+
+  # ==========================================================================
+  # controleur_cnil — vues anonymisées — http://VM:3007
+  # ==========================================================================
+  cnil:
+    <<: *site
+    container_name: blackvault-cnil
+    environment:
+      <<: *db-env
+      DB_USER: controleur_cnil
+      DB_PASSWORD: ${PWD_CNIL:-cnil_pwd}
+    ports:
+      - "3007:3000"
