@@ -23,6 +23,12 @@ export function centralLoginUrl(redirectTo?: string): string {
   )}`;
 }
 
+/** URL of a given microservice (same host, given port). */
+export function roleServiceUrl(port: number, path = "/dashboard"): string {
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:${port}${path}`;
+}
+
 /**
  * Validate a post-login redirect target: only same-host URLs are allowed
  * (prevents open-redirect). With no explicit target, fall back to the portal

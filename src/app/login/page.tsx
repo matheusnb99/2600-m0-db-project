@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button, Input } from "@/components/ui";
-import { isAuthService, centralLoginUrl, safeRedirect } from "@/lib/auth-url";
+import { isAuthService, centralLoginUrl, roleServiceUrl } from "@/lib/auth-url";
+import { roleById } from "@/lib/roles";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -27,10 +28,12 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      // Back to where the user came from (validated same-host), else dashboard.
-      const redirect = new URLSearchParams(window.location.search).get("redirect");
-      window.location.href = safeRedirect(redirect);
+      const agent = await login(email, password);
+      // Route the agent to THEIR role's microservice (role-bound access).
+      const role = roleById(agent?.role_id);
+      window.location.href = role
+        ? roleServiceUrl(role.port)
+        : `${window.location.protocol}//${window.location.hostname}/`; // portail
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentification échouée");
     } finally {

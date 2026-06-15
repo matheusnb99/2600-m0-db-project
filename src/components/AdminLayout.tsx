@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { centralLoginUrl } from "@/lib/auth-url";
+import { ROLE_NAMES, roleById } from "@/lib/roles";
+import { Forbidden } from "@/components/Forbidden";
 
 /** Map a Bell-LaPadula level (0..3) to its classification code. */
 const NIVEAU_LABELS: Record<string, string> = {
@@ -22,6 +24,7 @@ interface WhoAmI {
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [whoami, setWhoami] = useState<WhoAmI | null>(null);
+  const [whoamiReady, setWhoamiReady] = useState(false);
   const { agent, isLoading, logout } = useAuth();
   const pathname = usePathname();
 
@@ -33,14 +36,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, agent]);
 
-  // Show which DB role the data pool is connected as (the swappable taj_*
-  // identity) so the demo audience always knows whose perspective is on screen.
-  // The session cookie is sent automatically (same-origin).
+  // Show which DB role the data pool is connected as. The session cookie is
+  // sent automatically (same-origin). Also used to enforce role-bound access.
   useEffect(() => {
     fetch("/api/whoami", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setWhoami(data))
-      .catch(() => setWhoami(null));
+      .catch(() => setWhoami(null))
+      .finally(() => setWhoamiReady(true));
   }, []);
 
   const handleLogout = () => {
@@ -65,12 +68,28 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const niveauLabel =
     niveau && NIVEAU_LABELS[niveau] ? NIVEAU_LABELS[niveau] : null;
 
-  // Don't flash protected content before auth resolves / during the redirect.
-  if (isLoading || !agent) {
+  // Don't flash protected content before auth + DB context resolve / during a
+  // redirect.
+  if (isLoading || !whoamiReady || !agent) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-50 dark:bg-black">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
+    );
+  }
+
+  // Role-bound access: this microservice serves exactly one role (its DB
+  // connection role = current_user). If the logged-in agent's role differs,
+  // show the Forbidden page. (Skipped on non-business services like auth.)
+  const serviceRole = whoami?.db_role ?? "";
+  const agentRole = roleById(agent.role_id);
+  if (ROLE_NAMES.includes(serviceRole) && agentRole?.nom !== serviceRole) {
+    return (
+      <Forbidden
+        serviceRole={serviceRole}
+        agentRoleId={agent.role_id}
+        agentName={`${agent.prenom} ${agent.nom}`}
+      />
     );
   }
 

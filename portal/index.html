@@ -86,6 +86,13 @@
       Aucune règle de sécurité n'est codée dans le site : c'est le SGBD qui décide.
       Un service compromis ne peut donc jamais dépasser les droits de son rôle.
     </p>
+    <p class="lead" style="margin-top:10px">
+      <strong>Accès lié au rôle :</strong> après connexion, un agent est
+      automatiquement dirigé vers <em>le microservice de son rôle</em>. S'il tente
+      d'ouvrir le service d'un autre rôle, il obtient une page
+      <span style="color:var(--red)">« accès interdit »</span> — et la base bloquerait
+      de toute façon la requête.
+    </p>
     <div class="layers" style="margin-top:16px">
       <div class="layer">
         <h3>① RBAC — accès aux tables</h3>
@@ -120,6 +127,17 @@
   </section>
 
   <section>
+    <h2>Comptes de démonstration</h2>
+    <p class="lead">
+      Un compte par rôle (mot de passe commun <code>Blackvault2026!</code>).
+      Se connecter avec l'un d'eux dirige vers le service de son rôle.
+    </p>
+    <div style="overflow-x:auto">
+      <table id="creds"></table>
+    </div>
+  </section>
+
+  <section>
     <h2>Matrice d'accès — rôle × page</h2>
     <div style="overflow-x:auto">
       <table id="matrix"></table>
@@ -149,16 +167,17 @@
     { key:"audit",        label:"Audit",        path:"/admin/audit" },
     { key:"conformite",   label:"Conformité",   path:"/conformite" },
   ];
-  // 1 = accessible, 0 = bloqué — ordre = PAGES
+  // 1 = accessible, 0 = bloqué — ordre = PAGES. email = compte de démo du rôle.
   const SERVICES = [
-    { port:3001, role:"agent_saisie",            lvl:"CD",  desc:"Saisie PV & données de base",      acl:[1,1,1,0,0,0] },
-    { port:3002, role:"opj",                     lvl:"SD",  desc:"Officier de police judiciaire",    acl:[1,1,1,0,0,0] },
-    { port:3003, role:"magistrat",               lvl:"TSD", desc:"Supervision judiciaire",           acl:[1,1,1,1,0,0] },
-    { port:3004, role:"analyste_renseignement",  lvl:"TSD", desc:"Analyse signalements / fiches S",  acl:[1,1,1,0,0,0] },
-    { port:3005, role:"admin_systeme",           lvl:"NC",  desc:"Maintenance technique",            acl:[0,0,0,1,1,0] },
-    { port:3006, role:"auditeur",                lvl:"vues",desc:"Contrôle conformité (anonymisé)",  acl:[0,0,0,0,1,1] },
-    { port:3007, role:"controleur_cnil",         lvl:"vues",desc:"Contrôle CNIL (anonymisé)",        acl:[0,0,0,0,1,1] },
+    { port:3001, role:"agent_saisie",            lvl:"CD",  desc:"Saisie PV & données de base",      email:"nicole.laurent@interieur.gouv.fr",     acl:[1,1,1,0,0,0] },
+    { port:3002, role:"opj",                     lvl:"SD",  desc:"Officier de police judiciaire",    email:"matthieu.humbert@interieur.gouv.fr",   acl:[1,1,1,0,0,0] },
+    { port:3003, role:"magistrat",               lvl:"TSD", desc:"Supervision judiciaire",           email:"alexandria.denis@interieur.gouv.fr",   acl:[1,1,1,1,0,0] },
+    { port:3004, role:"analyste_renseignement",  lvl:"TSD", desc:"Analyse signalements / fiches S",  email:"maryse.olivier@interieur.gouv.fr",     acl:[1,1,1,0,0,0] },
+    { port:3005, role:"admin_systeme",           lvl:"NC",  desc:"Maintenance technique",            email:"isaac.marchal@interieur.gouv.fr",      acl:[0,0,0,1,1,0] },
+    { port:3006, role:"auditeur",                lvl:"vues",desc:"Contrôle conformité (anonymisé)",  email:"marguerite.lacroix@interieur.gouv.fr", acl:[0,0,0,0,1,1] },
+    { port:3007, role:"controleur_cnil",         lvl:"vues",desc:"Contrôle CNIL (anonymisé)",        email:"jean.bousquet@interieur.gouv.fr",      acl:[0,0,0,0,1,1] },
   ];
+  const DEMO_PASSWORD = "Blackvault2026!";
 
   const host = location.hostname;
   const url = (port, path="") => `http://${host}:${port}${path}`;
@@ -185,6 +204,18 @@
       <a class="open" href="${url(s.port)}" target="_blank" rel="noopener">Ouvrir le service ↗</a>`;
     cards.appendChild(el);
   }
+
+  // --- Comptes de démo ---
+  const creds = document.getElementById("creds");
+  creds.innerHTML =
+    `<thead><tr><th>Rôle</th><th>Email</th><th>Mot de passe</th><th>Service</th></tr></thead>` +
+    "<tbody>" + SERVICES.map(s => `
+      <tr>
+        <td class="role-cell">${s.role} <span class="lvl ${s.lvl==="vues"?"views":""}" style="margin-left:6px">${s.lvl}</span></td>
+        <td style="text-align:left"><code>${s.email}</code></td>
+        <td style="text-align:left"><code>${DEMO_PASSWORD}</code></td>
+        <td><a href="${url(s.port,"/dashboard")}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">:${s.port} ↗</a></td>
+      </tr>`).join("") + "</tbody>";
 
   // --- Matrice ---
   const matrix = document.getElementById("matrix");

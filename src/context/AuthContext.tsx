@@ -26,11 +26,11 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   /** Verify credentials against the auth service (used on :3000 only). */
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<SessionAgent | null>;
   /** Clear the cookie and bounce to the central login. */
   logout: () => Promise<void>;
   /** Re-read /api/auth/me. */
-  refresh: () => Promise<void>;
+  refresh: () => Promise<SessionAgent | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,12 +40,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<SessionAgent | null> => {
     try {
       const res = await fetch("/api/auth/me", { credentials: "same-origin" });
-      setAgent(res.ok ? (await res.json()).agent : null);
+      const a: SessionAgent | null = res.ok ? (await res.json()).agent : null;
+      setAgent(a);
+      return a;
     } catch {
       setAgent(null);
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (
+      email: string,
+      password: string
+    ): Promise<SessionAgent | null> => {
       setError(null);
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -70,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(message);
         throw new Error(message);
       }
-      await refresh();
+      return refresh();
     },
     [refresh]
   );
