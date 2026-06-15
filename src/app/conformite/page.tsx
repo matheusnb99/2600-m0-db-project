@@ -31,11 +31,8 @@ export default function ConformitePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("taj_token") : null;
-    fetch("/api/conformite", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    // Session cookie is sent automatically (same-origin).
+    fetch("/api/conformite", { credentials: "same-origin" })
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.message || "Erreur de chargement");

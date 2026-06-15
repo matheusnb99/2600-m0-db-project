@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authQuery, authQueryOne } from "@/lib/db";
 import { pgErrorResponse } from "@/lib/api-error";
+import { TOKEN_COOKIE } from "@/lib/session";
 import { comparePassword, generateToken } from "@/lib/auth";
 import type { AuthSession, Agent } from "@/types";
+
+const SESSION_SECONDS = 8 * 60 * 60; // 8 h
 
 /**
  * POST /api/auth/login
@@ -113,16 +116,20 @@ export async function POST(request: NextRequest) {
       [agent.id]
     );
 
-    // Create session token
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(); // 8 hours
+    // Create session token. The payload is self-contained (incl. display
+    // identity) so data services can show "who am I" without a DB query.
+    const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000).toISOString();
     const token = generateToken({
       agent_id: agent.id,
       email: agent.email,
+      matricule: agent.matricule,
+      prenom: agent.prenom,
+      nom: agent.nom,
       role_id: agent.role_id,
       habilitation_niveau_id: agent.habilitation_niveau_id,
       // BLP session level (0..3) — used server-side to open the RLS session.
       habilitation_niveau: agent.habilitation_niveau ?? 0,
-      exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60,
+      exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS,
     });
 
     // Remove password hash from response
@@ -141,7 +148,17 @@ export async function POST(request: NextRequest) {
       [agent.id, JSON.stringify({ success: true })]
     );
 
-    return NextResponse.json(session, { status: 200 });
+    // Set the JWT as a host-scoped, HttpOnly cookie. No port in the cookie
+    // scope → it is sent to every microservice (3001+) on this host. No
+    // `secure` flag because the deployment is plain HTTP (VPN-protected LAN).
+    const res = NextResponse.json(session, { status: 200 });
+    res.cookies.set(TOKEN_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_SECONDS,
+    });
+    return res;
   } catch (error) {
     return pgErrorResponse(error, "Erreur interne du serveur");
   }

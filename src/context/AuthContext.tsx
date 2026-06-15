@@ -1,69 +1,100 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
-import type { Agent, AuthSession } from "@/types";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { centralLoginUrl } from "@/lib/auth-url";
+
+/** Identity carried in the JWT (no DB lookup needed on data services). */
+export interface SessionAgent {
+  id: string;
+  email?: string;
+  matricule: string;
+  prenom: string;
+  nom: string;
+  role_id: number;
+  habilitation_niveau_id: number;
+  habilitation_niveau: number;
+}
 
 interface AuthContextType {
-  session: AuthSession | null;
-  agent: Agent | null;
+  agent: SessionAgent | null;
   isLoading: boolean;
   error: string | null;
+  /** Verify credentials against the auth service (used on :3000 only). */
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  /** Clear the cookie and bounce to the central login. */
+  logout: () => Promise<void>;
+  /** Re-read /api/auth/me. */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [agent, setAgent] = useState<SessionAgent | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
+  const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Authentification échouée");
-      }
-
-      const data: AuthSession = await response.json();
-      setSession(data);
-      // Store token in localStorage for persistence
-      localStorage.setItem("taj_token", data.token);
-      localStorage.setItem("taj_session", JSON.stringify(data));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur d'authentification";
-      setError(message);
-      throw err;
+      const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+      setAgent(res.ok ? (await res.json()).agent : null);
+    } catch {
+      setAgent(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
-    setSession(null);
-    localStorage.removeItem("taj_token");
-    localStorage.removeItem("taj_session");
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setError(null);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = data.message || "Authentification échouée";
+        setError(message);
+        throw new Error(message);
+      }
+      await refresh();
+    },
+    [refresh]
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    } catch {
+      /* ignore */
+    }
+    setAgent(null);
+    if (typeof window !== "undefined") {
+      window.location.href = centralLoginUrl(
+        `${window.location.protocol}//${window.location.host}/dashboard`
+      );
+    }
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{
-        session,
-        agent: session?.agent || null,
-        isLoading,
-        error,
-        login,
-        logout,
-      }}
+      value={{ agent, isLoading, error, login, logout, refresh }}
     >
       {children}
     </AuthContext.Provider>

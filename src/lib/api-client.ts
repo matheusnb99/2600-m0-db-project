@@ -14,16 +14,14 @@ async function apiCall<T = any>(
 ): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || ""}/api${path}`;
 
-  // Forward the auth token so the backend can open the RLS / Bell-LaPadula
-  // session for this agent. Without it, RLS-protected tables return no rows.
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("taj_token") : null;
-
+  // The session travels as a host-scoped cookie (set by the auth service), so
+  // same-origin requests carry it automatically — nothing to attach here. The
+  // backend reads it to open the RLS / Bell-LaPadula session.
   try {
     const response = await fetch(url, {
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
       ...options,

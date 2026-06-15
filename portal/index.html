@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OPÉRATION BLACKVAULT — Microservices TAJ</title>
+<style>
+  :root {
+    --bg:#09090b; --panel:#18181b; --panel2:#27272a; --border:#3f3f46;
+    --txt:#fafafa; --muted:#a1a1aa; --blue:#2563eb; --green:#22c55e; --red:#ef4444;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.5;
+  }
+  header {
+    padding:32px 24px; border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#101014,#09090b);
+  }
+  .wrap { max-width:1100px; margin:0 auto; padding:0 24px; }
+  h1 { margin:0 0 4px; font-size:26px; }
+  h1 .tag { color:var(--blue); }
+  .sub { color:var(--muted); font-size:14px; }
+  section { padding:32px 0; }
+  h2 { font-size:18px; margin:0 0 16px; }
+  p.lead { color:var(--muted); max-width:780px; }
+  code { background:var(--panel2); padding:1px 6px; border-radius:4px; font-size:.85em; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+  .card {
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:18px; display:flex; flex-direction:column; gap:12px;
+  }
+  .card .top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .role { font-family:ui-monospace,monospace; font-weight:700; }
+  .port { font-size:12px; color:var(--muted); }
+  .lvl {
+    font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;
+    background:var(--blue); color:#fff;
+  }
+  .lvl.views { background:#7c3aed; }
+  .desc { font-size:13px; color:var(--muted); margin-top:-4px; }
+  .acl { display:flex; flex-wrap:wrap; gap:6px; }
+  .pill { font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); }
+  .pill.ok  { color:#bbf7d0; background:rgba(34,197,94,.12);  border-color:rgba(34,197,94,.4); }
+  .pill.no  { color:#fecaca; background:rgba(239,68,68,.12);  border-color:rgba(239,68,68,.4); }
+  a.open {
+    margin-top:auto; text-align:center; text-decoration:none; font-weight:600; font-size:14px;
+    padding:9px 12px; border-radius:8px; background:var(--blue); color:#fff;
+  }
+  a.open:hover { background:#1d4ed8; }
+
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:center; }
+  th:first-child, td:first-child { text-align:left; white-space:nowrap; }
+  thead th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  td.role-cell { font-family:ui-monospace,monospace; }
+  td.role-cell a { color:var(--txt); text-decoration:none; }
+  td.role-cell a:hover { color:var(--blue); text-decoration:underline; }
+  .yes { color:var(--green); font-weight:700; }
+  .lock { color:var(--red); }
+  .layers { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+  .layer { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .layer h3 { margin:0 0 6px; font-size:15px; }
+  .layer p { margin:0; color:var(--muted); font-size:13px; }
+  .legend { color:var(--muted); font-size:13px; margin-top:12px; }
+  footer { padding:24px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>OPÉRATION <span class="tag">BLACKVAULT</span> — Microservices TAJ</h1>
+    <div class="sub">Un microservice par rôle PostgreSQL · la sécurité est portée par la base, pas par l'application</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2>Principe</h2>
+    <p class="lead">
+      Chaque service ci-dessous est <strong>la même application</strong>, déployée avec
+      une <strong>chaîne de connexion PostgreSQL différente</strong> (un rôle par service).
+      Aucune règle de sécurité n'est codée dans le site : c'est le SGBD qui décide.
+      Un service compromis ne peut donc jamais dépasser les droits de son rôle.
+    </p>
+    <div class="layers" style="margin-top:16px">
+      <div class="layer">
+        <h3>① RBAC — accès aux tables</h3>
+        <p>Le rôle de connexion (<code>GRANT</code>) détermine <strong>quelles pages</strong>
+        répondent. Sans droit sur la table, la base renvoie « accès refusé » 🔒.</p>
+      </div>
+      <div class="layer">
+        <h3>② Bell-LaPadula / RLS — filtrage des lignes</h3>
+        <p>L'habilitation de l'agent connecté (NC&lt;CD&lt;SD&lt;TSD) filtre
+        <strong>quelles lignes</strong> sont visibles dans les tables autorisées (No Read Up).</p>
+      </div>
+      <div class="layer">
+        <h3>③ Vues anonymisées</h3>
+        <p>Les rôles de contrôle (auditeur, CNIL) n'accèdent qu'à des données
+        <strong>pseudonymisées</strong> et à des statistiques agrégées — jamais la donnée brute.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">Les 7 microservices</h2>
+      <a class="open" id="loginBtn" style="margin:0" href="#" target="_blank" rel="noopener">🔑 Se connecter (service d'auth · port 3000)</a>
+    </div>
+    <p class="lead" style="margin-top:10px">
+      L'authentification est <strong>centralisée</strong> sur le service d'auth
+      (port 3000) : il vérifie les identifiants et émet un jeton (cookie d'hôte)
+      valable sur les 7 services. Ouvrir un service sans être connecté redirige
+      automatiquement vers la page de login.
+    </p>
+    <div class="grid" id="cards" style="margin-top:16px"></div>
+  </section>
+
+  <section>
+    <h2>Matrice d'accès — rôle × page</h2>
+    <div style="overflow-x:auto">
+      <table id="matrix"></table>
+    </div>
+    <p class="legend"><span class="yes">✓</span> = page accessible &nbsp;·&nbsp; <span class="lock">🔒</span> = bloqué par la base (RBAC / Bell-LaPadula)</p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    Démo : se connecter une fois via le service d'auth (port 3000) avec
+    <code>nicole.laurent@interieur.gouv.fr</code> / <code>Blackvault2026!</code>,
+    puis ouvrir les services et comparer ce qui s'affiche de l'un à l'autre — la
+    session (cookie) est partagée. Le bandeau en haut de chaque service indique
+    le rôle PostgreSQL de connexion.
+  </div>
+</footer>
+
+<script>
+  // Données — alignées sur les GRANT (script 07) et les policies RLS (script 08).
+  const PAGES = [
+    { key:"personnes",    label:"Personnes",    path:"/personnes" },
+    { key:"affaires",     label:"Affaires",     path:"/affaires" },
+    { key:"signalements", label:"Signalements", path:"/signalements" },
+    { key:"agents",       label:"Agents",       path:"/admin/agents" },
+    { key:"audit",        label:"Audit",        path:"/admin/audit" },
+    { key:"conformite",   label:"Conformité",   path:"/conformite" },
+  ];
+  // 1 = accessible, 0 = bloqué — ordre = PAGES
+  const SERVICES = [
+    { port:3001, role:"agent_saisie",            lvl:"CD",  desc:"Saisie PV & données de base",      acl:[1,1,1,0,0,0] },
+    { port:3002, role:"opj",                     lvl:"SD",  desc:"Officier de police judiciaire",    acl:[1,1,1,0,0,0] },
+    { port:3003, role:"magistrat",               lvl:"TSD", desc:"Supervision judiciaire",           acl:[1,1,1,1,0,0] },
+    { port:3004, role:"analyste_renseignement",  lvl:"TSD", desc:"Analyse signalements / fiches S",  acl:[1,1,1,0,0,0] },
+    { port:3005, role:"admin_systeme",           lvl:"NC",  desc:"Maintenance technique",            acl:[0,0,0,1,1,0] },
+    { port:3006, role:"auditeur",                lvl:"vues",desc:"Contrôle conformité (anonymisé)",  acl:[0,0,0,0,1,1] },
+    { port:3007, role:"controleur_cnil",         lvl:"vues",desc:"Contrôle CNIL (anonymisé)",        acl:[0,0,0,0,1,1] },
+  ];
+
+  const host = location.hostname;
+  const url = (port, path="") => `http://${host}:${port}${path}`;
+
+  // Bouton de connexion → service d'auth (port 3000)
+  document.getElementById("loginBtn").href = url(3000, "/login");
+
+  // --- Cartes ---
+  const cards = document.getElementById("cards");
+  for (const s of SERVICES) {
+    const ok = [], no = [];
+    PAGES.forEach((p,i)=> (s.acl[i] ? ok : no).push(p.label));
+    const pills = (arr,cls)=> arr.map(l=>`<span class="pill ${cls}">${cls==="ok"?"✓":"🔒"} ${l}</span>`).join("");
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `
+      <div class="top">
+        <span class="role">${s.role}</span>
+        <span class="lvl ${s.lvl==="vues"?"views":""}">${s.lvl}</span>
+      </div>
+      <div class="port">${url(s.port)}</div>
+      <div class="desc">${s.desc}</div>
+      <div class="acl">${pills(ok,"ok")}${pills(no,"no")}</div>
+      <a class="open" href="${url(s.port)}" target="_blank" rel="noopener">Ouvrir le service ↗</a>`;
+    cards.appendChild(el);
+  }
+
+  // --- Matrice ---
+  const matrix = document.getElementById("matrix");
+  let head = `<thead><tr><th>Microservice (rôle)</th>${PAGES.map(p=>`<th>${p.label}</th>`).join("")}</tr></thead>`;
+  let body = "<tbody>" + SERVICES.map(s => `
+    <tr>
+      <td class="role-cell"><a href="${url(s.port)}" target="_blank" rel="noopener">:${s.port} · ${s.role}</a></td>
+      ${s.acl.map(v => v ? '<td class="yes">✓</td>' : '<td class="lock">🔒</td>').join("")}
+    </tr>`).join("") + "</tbody>";
+  matrix.innerHTML = head + body;
+</script>
+</body>
+</html>

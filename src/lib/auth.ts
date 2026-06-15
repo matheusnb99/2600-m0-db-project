@@ -75,6 +75,14 @@ export function verifyToken(token: string): Record<string, any> | null {
       Buffer.from(body, "base64").toString("utf-8")
     );
 
+    // Reject expired tokens (exp is a UNIX timestamp in seconds).
+    if (
+      typeof payload.exp === "number" &&
+      payload.exp < Math.floor(Date.now() / 1000)
+    ) {
+      return null;
+    }
+
     return payload;
   } catch {
     return null;

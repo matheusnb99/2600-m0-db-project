@@ -66,7 +66,9 @@ x-site: &site
     retries: 3
     start_period: 20s
 
-# --- Variables d'environnement communes (auth + réseau base) ----------------
+# --- Variables d'environnement communes (réseau base + secret JWT) ----------
+# NOTE : pas de AUTH_DB_* ici. Seul le service `auth` (port 3000) possède le
+# pool privilégié de login ; les services data ne font que *vérifier* le JWT.
 x-db-env: &db-env
   NODE_ENV: production
   # En conteneur, la base est sur l'HÔTE → host.docker.internal (mappé via
@@ -76,13 +78,58 @@ x-db-env: &db-env
   DB_HOST: ${DB_HOST_CONTAINER:-host.docker.internal}
   DB_PORT: ${DB_PORT:-5432}
   DB_NAME: ${DB_NAME:-taj}
-  # Pool AUTH (login) — identité privilégiée, partagée. En prod stricte, ne le
-  # mettre que sur UN service d'auth ; ici on garde simple pour la démo.
-  AUTH_DB_USER: ${AUTH_DB_USER:-postgres}
-  AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?defini AUTH_DB_PASSWORD dans ./.env}
+  # Secret JWT partagé : un token émis par le service d'auth est accepté par
+  # tous les autres services (vérification de signature uniquement).
   JWT_SECRET: ${JWT_SECRET:?defini JWT_SECRET dans ./.env}
 
 services:
+  # ==========================================================================
+  # portal — page de présentation jury (statique). Accessible SANS port :
+  #   http://<ip-vm>/   → vue d'ensemble + liens vers les 7 microservices.
+  # Image nginx "unprivileged" : tourne en non-root sur 8080, mappé sur 80.
+  # ==========================================================================
+  portal:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    container_name: blackvault-portal
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./portal:/usr/share/nginx/html:ro
+    ports:
+      - "80:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+
+  # ==========================================================================
+  # auth — SERVICE D'AUTHENTIFICATION (login) — http://VM:3000
+  # Seul service portant le pool AUTH privilégié (lecture agents + écriture
+  # audit_log). Émet le JWT dans un cookie d'HÔTE → valable sur tous les ports
+  # (3001-3007). Les services data ne connaissent QUE JWT_SECRET pour vérifier.
+  # ==========================================================================
+  auth:
+    <<: *site
+    container_name: blackvault-auth
+    environment:
+      <<: *db-env
+      # Pool AUTH : vérifie les identifiants contre la table agents.
+      AUTH_DB_USER: ${AUTH_DB_USER:-postgres}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?defini AUTH_DB_PASSWORD dans ./.env}
+      # Pool DATA non utilisé pour servir des données ici (service de login) ;
+      # on l'aligne sur l'identité AUTH pour éviter un défaut "postgres".
+      DB_USER: ${AUTH_DB_USER:-postgres}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:?defini AUTH_DB_PASSWORD dans ./.env}
+    ports:
+      - "3000:3000"
+
   # ==========================================================================
   # agent_saisie — habilitation CD — http://VM:3001
   # ==========================================================================

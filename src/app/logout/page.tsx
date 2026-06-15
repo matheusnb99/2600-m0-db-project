@@ -1,20 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LogoutPage() {
   const { logout } = useAuth();
-  const router = useRouter();
 
+  // logout() clears the cookie then redirects to the central auth login.
   useEffect(() => {
     logout();
-    // Redirect to login after a short delay
-    setTimeout(() => {
-      router.push("/login");
-    }, 500);
-  }, [logout, router]);
+  }, [logout]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">

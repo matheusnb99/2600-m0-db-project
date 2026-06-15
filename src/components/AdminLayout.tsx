@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { centralLoginUrl } from "@/lib/auth-url";
 
 /** Map a Bell-LaPadula level (0..3) to its classification code. */
 const NIVEAU_LABELS: Record<string, string> = {
@@ -21,18 +22,22 @@ interface WhoAmI {
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [whoami, setWhoami] = useState<WhoAmI | null>(null);
-  const { agent, logout } = useAuth();
-  const router = useRouter();
+  const { agent, isLoading, logout } = useAuth();
   const pathname = usePathname();
+
+  // Auth gate: once /api/auth/me has resolved, an unauthenticated visitor is
+  // bounced to the central auth service (:3000), carrying a return URL.
+  useEffect(() => {
+    if (!isLoading && !agent && typeof window !== "undefined") {
+      window.location.href = centralLoginUrl();
+    }
+  }, [isLoading, agent]);
 
   // Show which DB role the data pool is connected as (the swappable taj_*
   // identity) so the demo audience always knows whose perspective is on screen.
+  // The session cookie is sent automatically (same-origin).
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("taj_token") : null;
-    fetch("/api/whoami", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    fetch("/api/whoami", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setWhoami(data))
       .catch(() => setWhoami(null));
@@ -40,7 +45,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
   };
 
   const navigationItems = [
@@ -60,6 +64,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const niveau = whoami?.session_level ?? null;
   const niveauLabel =
     niveau && NIVEAU_LABELS[niveau] ? NIVEAU_LABELS[niveau] : null;
+
+  // Don't flash protected content before auth resolves / during the redirect.
+  if (isLoading || !agent) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-black">

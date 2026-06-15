@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button, Input } from "@/components/ui";
+import { isAuthService, centralLoginUrl, safeRedirect } from "@/lib/auth-url";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,7 +12,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
-  const router = useRouter();
+
+  // Login is centralised on the auth service (:3000). If this page is reached
+  // on a data service, bounce to the central login carrying the return URL.
+  useEffect(() => {
+    if (typeof window === "undefined" || isAuthService()) return;
+    const redirect = new URLSearchParams(window.location.search).get("redirect");
+    window.location.href = centralLoginUrl(redirect ?? undefined);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +28,9 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push("/dashboard");
+      // Back to where the user came from (validated same-host), else dashboard.
+      const redirect = new URLSearchParams(window.location.search).get("redirect");
+      window.location.href = safeRedirect(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentification échouée");
     } finally {
