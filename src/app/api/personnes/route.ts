@@ -16,9 +16,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     let sql = `
-      SELECT 
+      SELECT
         id, nom, prenom, date_naissance, lieu_naissance, nationalite, sexe,
-        niveau_classification_id, statut, numero_taj, date_creation, date_modification
+        niveau_classification_id, statut, numero_taj, date_creation, date_modification,
+        COUNT(*) OVER()::int AS total_count
       FROM personnes
       WHERE 1=1
     `;

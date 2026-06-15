@@ -17,9 +17,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     let sql = `
-      SELECT 
+      SELECT
         id, numero_pv, date_faits, date_ouverture, date_cloture, service_responsable_id,
-        statut, niveau_classification_id, description, lieu_faits, date_creation, date_modification
+        statut, niveau_classification_id, description, lieu_faits, date_creation, date_modification,
+        COUNT(*) OVER()::int AS total_count
       FROM affaires
       WHERE 1=1
     `;

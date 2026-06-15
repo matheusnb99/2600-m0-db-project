@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, Badge, Button, Input, Select, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
+
+const PAGE_SIZE = 25;
 
 export default function AffairesPage() {
   const [affaires, setAffaires] = useState<any[]>([]);
@@ -13,6 +15,8 @@ export default function AffairesPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statut, setStatut] = useState("en_cours");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const perms = usePermissions();
 
   useEffect(() => {
@@ -20,8 +24,14 @@ export default function AffairesPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = (await apiClient.fetchAffaires({ search, statut })) as any[];
+        const data = (await apiClient.fetchAffaires({
+          search,
+          statut,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        })) as any[];
         setAffaires(data);
+        setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
         setError((err as ApiError).message || "Erreur de chargement");
       } finally {
@@ -31,6 +41,10 @@ export default function AffairesPage() {
 
     const timer = setTimeout(fetchAffaires, 300);
     return () => clearTimeout(timer);
+  }, [search, statut, page]);
+
+  useEffect(() => {
+    setPage(0);
   }, [search, statut]);
 
   const statutLabels: Record<string, string> = {
@@ -55,7 +69,7 @@ export default function AffairesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Affaires
           </h1>
-          {perms?.affaires && (
+          {perms?.insert?.affaires && (
             <Link href="/affaires/create">
               <Button variant="primary">➕ Nouvelle affaire</Button>
             </Link>
@@ -88,7 +102,7 @@ export default function AffairesPage() {
             </div>
             <div className="flex items-end">
               <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {affaires.length} résultat{affaires.length !== 1 ? "s" : ""}
+                {total} résultat{total !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -170,6 +184,15 @@ export default function AffairesPage() {
             </table>
           </div>
         </Card>
+        )}
+
+        {!error && !loading && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPage={setPage}
+          />
         )}
       </div>
     </AdminLayout>

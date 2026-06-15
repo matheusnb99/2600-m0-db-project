@@ -130,7 +130,7 @@ export default function RolesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Gestion des Rôles RBAC
           </h1>
-          {perms?.roles && (
+          {perms?.insert?.roles && (
             <Button
               variant="primary"
               onClick={() => {

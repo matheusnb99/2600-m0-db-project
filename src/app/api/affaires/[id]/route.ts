@@ -12,15 +12,28 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = getSessionContext(request);
+  const { id } = await params;
+
+  // A related table the connected role isn't granted must NOT blank the whole
+  // sheet — degrade that section to empty on `permission denied` (42501).
+  const safe = async <T>(p: Promise<T[]>): Promise<T[]> => {
+    try {
+      return await p;
+    } catch (e) {
+      if ((e as { code?: string }).code === "42501") return [];
+      throw e;
+    }
+  };
+
   try {
-    // Fetch main case record
+    // Main case record — essential (403s the page if the role can't read it).
     const affaire = await queryOne(
       `SELECT
         id, numero_pv, date_faits, date_ouverture, date_cloture, service_responsable_id,
         statut, niveau_classification_id, description, lieu_faits, date_creation, date_modification
        FROM affaires
        WHERE id = $1`,
-      [(await params).id],
+      [id],
       session
     );
 
@@ -31,57 +44,64 @@ export async function GET(
       );
     }
 
-    // Fetch people involved
-    const people = await query(
-      `SELECT ap.id, ap.personne_id, ap.role, ap.date_implication, ap.observations,
-              p.nom, p.prenom, p.date_naissance, p.numero_taj
-       FROM affaire_personnes ap
-       JOIN personnes p ON p.id = ap.personne_id
-       WHERE ap.affaire_id = $1
-       ORDER BY ap.role, p.nom`,
-      [(await params).id],
-      session
+    const people = await safe(
+      query(
+        `SELECT ap.id, ap.personne_id, ap.role, ap.date_implication, ap.observations,
+                p.nom, p.prenom, p.date_naissance, p.numero_taj
+         FROM affaire_personnes ap
+         JOIN personnes p ON p.id = ap.personne_id
+         WHERE ap.affaire_id = $1
+         ORDER BY ap.role, p.nom`,
+        [id],
+        session
+      )
     );
 
-    // Fetch infractions
-    const infractions = await query(
-      `SELECT ai.id, ai.infraction_id, i.code_natinf, i.libelle, i.categorie, i.article_code_penal
-       FROM affaire_infractions ai
-       JOIN infractions i ON i.id = ai.infraction_id
-       WHERE ai.affaire_id = $1
-       ORDER BY i.code_natinf`,
-      [(await params).id],
-      session
+    const infractions = await safe(
+      query(
+        `SELECT ai.id, ai.infraction_id, i.code_natinf, i.libelle, i.categorie, i.article_code_penal
+         FROM affaire_infractions ai
+         JOIN infractions i ON i.id = ai.infraction_id
+         WHERE ai.affaire_id = $1
+         ORDER BY i.code_natinf`,
+        [id],
+        session
+      )
     );
 
-    // Fetch decisions
-    const decisions = await query(
-      `SELECT id, type, date_decision, juridiction, peine, description
-       FROM decisions_justice
-       WHERE affaire_id = $1
-       ORDER BY date_decision DESC`,
-      [(await params).id],
-      session
+    // Décisions de justice — lecture restreinte (magistrat écrit ; certains
+    // rôles n'y ont pas accès).
+    const decisions = await safe(
+      query(
+        `SELECT id, type, date_decision, juridiction, peine, description
+         FROM decisions_justice
+         WHERE affaire_id = $1
+         ORDER BY date_decision DESC`,
+        [id],
+        session
+      )
     );
 
-    // Fetch evidence
-    const evidence = await query(
-      `SELECT id, description, lieu_stockage, date_saisie, statut, numero_scelle
-       FROM scelles
-       WHERE affaire_id = $1
-       ORDER BY date_saisie DESC`,
-      [(await params).id],
-      session
+    const evidence = await safe(
+      query(
+        `SELECT id, description, lieu_stockage, date_saisie, statut, numero_scelle
+         FROM scelles
+         WHERE affaire_id = $1
+         ORDER BY date_saisie DESC`,
+        [id],
+        session
+      )
     );
 
-    // Fetch vehicles
-    const vehicles = await query(
-      `SELECT av.id, av.vehicule_id, av.role, v.immatriculation, v.marque, v.modele
-       FROM affaire_vehicules av
-       JOIN vehicules v ON v.id = av.vehicule_id
-       WHERE av.affaire_id = $1`,
-      [(await params).id],
-      session
+    const vehicles = await safe(
+      query(
+        `SELECT av.id, av.vehicule_id, av.role, v.immatriculation, v.marque, v.modele
+         FROM affaire_vehicules av
+         JOIN vehicules v ON v.id = av.vehicule_id
+         WHERE av.affaire_id = $1`,
+        [id],
+        session
+      )
     );
 
     return NextResponse.json(

@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, Badge, Button, Input, Select, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
+
+const PAGE_SIZE = 24;
 
 export default function SignalementsPage() {
   const [signalements, setSignalements] = useState<any[]>([]);
@@ -13,6 +15,8 @@ export default function SignalementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState("all");
   const [activeOnly, setActiveOnly] = useState(true);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const perms = usePermissions();
 
   useEffect(() => {
@@ -20,11 +24,15 @@ export default function SignalementsPage() {
       setLoading(true);
       setError(null);
       try {
-        const filters: Record<string, any> = {};
+        const filters: Record<string, any> = {
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        };
         if (type !== "all") filters.type = type;
         if (activeOnly) filters.actif = "true";
         const data = (await apiClient.fetchSignalements(filters)) as any[];
         setSignalements(data);
+        setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
         setError((err as ApiError).message || "Erreur de chargement");
       } finally {
@@ -33,6 +41,10 @@ export default function SignalementsPage() {
     };
 
     fetchSignalements();
+  }, [type, activeOnly, page]);
+
+  useEffect(() => {
+    setPage(0);
   }, [type, activeOnly]);
 
   const typeLabels: Record<string, string> = {
@@ -66,7 +78,7 @@ export default function SignalementsPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Signalements
           </h1>
-          {perms?.signalements && (
+          {perms?.insert?.signalements && (
             <Link href="/signalements/create">
               <Button variant="primary">🚨 Nouveau signalement</Button>
             </Link>
@@ -190,6 +202,15 @@ export default function SignalementsPage() {
             ))
           )}
         </div>
+        )}
+
+        {!error && !loading && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPage={setPage}
+          />
         )}
       </div>
     </AdminLayout>

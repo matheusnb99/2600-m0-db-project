@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 
-/** INSERT capability of the connected role, per business table. */
-export interface InsertPerms {
+/** Per-table boolean capability. */
+export interface TablePerms {
   personnes: boolean;
   affaires: boolean;
   signalements: boolean;
@@ -12,17 +12,25 @@ export interface InsertPerms {
   roles: boolean;
 }
 
+/** INSERT / UPDATE / DELETE capability of the connected role, per table. */
+export interface Perms {
+  insert: TablePerms;
+  update: TablePerms;
+  delete: TablePerms;
+}
+
 /**
  * Reads /api/permissions once. Returns null until loaded, then the per-table
- * INSERT booleans (from has_table_privilege). Use to show/hide create buttons.
+ * INSERT/UPDATE/DELETE booleans (from has_table_privilege). Use to show/hide
+ * create / edit / delete actions.
  */
-export function usePermissions(): InsertPerms | null {
-  const [perms, setPerms] = useState<InsertPerms | null>(null);
+export function usePermissions(): Perms | null {
+  const [perms, setPerms] = useState<Perms | null>(null);
 
   useEffect(() => {
     fetch("/api/permissions", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setPerms(d?.insert ?? null))
+      .then((d) => setPerms(d ?? null))
       .catch(() => setPerms(null));
   }, []);
 

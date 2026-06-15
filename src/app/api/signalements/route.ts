@@ -17,11 +17,12 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     let sql = `
-      SELECT 
+      SELECT
         s.id, s.personne_id, s.type, s.motif, s.date_emission, s.date_expiration,
         s.emis_par_service_id, s.niveau_classification_id, s.actif, s.priorite,
         s.date_creation, s.date_modification,
-        p.nom, p.prenom, p.date_naissance
+        p.nom, p.prenom, p.date_naissance,
+        COUNT(*) OVER()::int AS total_count
       FROM signalements s
       JOIN personnes p ON p.id = s.personne_id
       WHERE 1=1

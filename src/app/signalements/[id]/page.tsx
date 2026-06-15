@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, Badge, Button } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 
 export default function SignalementDetailPage() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function SignalementDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const perms = usePermissions();
 
   useEffect(() => {
     const fetchSignalement = async () => {
@@ -91,18 +93,20 @@ export default function SignalementDetailPage() {
               Signalement #{signalement.id}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary">Éditer</Button>
-            {signalement.actif && (
-              <Button
-                variant="danger"
-                onClick={handleDeactivate}
-                disabled={isUpdating}
-              >
-                {isUpdating ? "Désactivation..." : "Désactiver"}
-              </Button>
-            )}
-          </div>
+          {perms?.update?.signalements && (
+            <div className="flex gap-2">
+              <Button variant="secondary">Éditer</Button>
+              {signalement.actif && (
+                <Button
+                  variant="danger"
+                  onClick={handleDeactivate}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? "Désactivation..." : "Désactiver"}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Status Alert */}

@@ -63,7 +63,12 @@ export default function DashboardPage() {
       def
         .fetch()
         .then((rows) => {
-          const count = Array.isArray(rows) ? rows.length : 0;
+          const arr = Array.isArray(rows) ? rows : [];
+          // Prefer the exact total (COUNT(*) OVER()) when the endpoint provides
+          // it; otherwise fall back to the number of rows returned.
+          const count =
+            (arr[0] as { total_count?: number } | undefined)?.total_count ??
+            arr.length;
           setStats((prev) =>
             prev.map((s, i) => (i === idx ? { ...s, value: count } : s))
           );

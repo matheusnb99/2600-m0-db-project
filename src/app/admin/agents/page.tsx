@@ -95,7 +95,7 @@ export default function AgentsPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Gestion des Agents
           </h1>
-          {perms?.agents && (
+          {perms?.insert?.agents && (
             <Button
               variant="primary"
               onClick={() => {
@@ -264,22 +264,26 @@ export default function AgentsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleAgent(agent)}
-                          className="text-xs px-3 py-1 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 rounded transition-colors"
-                        >
-                          {agent.actif ? "Désactiver" : "Activer"}
-                        </button>
-                        {agent.verrouille && (
+                      {perms?.update?.agents ? (
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleUnlock(agent.id)}
-                            className="text-xs px-3 py-1 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 text-red-700 dark:text-red-200 rounded transition-colors"
+                            onClick={() => handleToggleAgent(agent)}
+                            className="text-xs px-3 py-1 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 rounded transition-colors"
                           >
-                            Déverrouiller
+                            {agent.actif ? "Désactiver" : "Activer"}
                           </button>
-                        )}
-                      </div>
+                          {agent.verrouille && (
+                            <button
+                              onClick={() => handleUnlock(agent.id)}
+                              className="text-xs px-3 py-1 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 text-red-700 dark:text-red-200 rounded transition-colors"
+                            >
+                              Déverrouiller
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-400">—</span>
+                      )}
                     </td>
                   </tr>
                   ))

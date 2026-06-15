@@ -18,11 +18,13 @@ export async function GET(request: NextRequest) {
     const table = searchParams.get("table");
     const alerte = searchParams.get("alerte");
     const limit = parseInt(searchParams.get("limit") || "100");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
     let sql = `
       SELECT
         id, horodatage, agent_id, action, table_cible, enregistrement_id,
-        details, ip_source, session_id, alerte, type_alerte, severite
+        details, ip_source, session_id, alerte, type_alerte, severite,
+        COUNT(*) OVER()::int AS total_count
       FROM audit_log
       WHERE 1=1
     `;
@@ -40,8 +42,8 @@ export async function GET(request: NextRequest) {
       sql += ` AND alerte = true`;
     }
 
-    sql += ` ORDER BY horodatage DESC LIMIT $${params.length + 1}`;
-    params.push(limit);
+    sql += ` ORDER BY horodatage DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
 
     const logs = await query(sql, params, getSessionContext(request));
     return NextResponse.json(logs, { status: 200 });

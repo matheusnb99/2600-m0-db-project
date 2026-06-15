@@ -98,7 +98,7 @@ export default function ServicesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Gestion des Services
           </h1>
-          {perms?.services && (
+          {perms?.insert?.services && (
             <Button
               variant="primary"
               onClick={() => {
@@ -230,17 +230,19 @@ export default function ServicesPage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
-                <button
-                  onClick={() => handleToggleService(service)}
-                  className="flex-1 px-3 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded transition-colors font-medium"
-                >
-                  {service.actif ? "Désactiver" : "Activer"}
-                </button>
-                <button className="flex-1 px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-200 rounded transition-colors font-medium">
-                  Éditer
-                </button>
-              </div>
+              {perms?.update?.services && (
+                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
+                  <button
+                    onClick={() => handleToggleService(service)}
+                    className="flex-1 px-3 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded transition-colors font-medium"
+                  >
+                    {service.actif ? "Désactiver" : "Activer"}
+                  </button>
+                  <button className="flex-1 px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-200 rounded transition-colors font-medium">
+                    Éditer
+                  </button>
+                </div>
+              )}
             </Card>
           ))}
         </div>

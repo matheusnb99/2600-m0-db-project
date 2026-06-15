@@ -64,6 +64,54 @@ export function AccessDenied({ message }: { message: string }) {
   );
 }
 
+/**
+ * Prev/Next pagination with a page indicator. `total` comes from the API
+ * (COUNT(*) OVER()), `page` is 0-based.
+ */
+export function Pagination({
+  page,
+  pageSize,
+  total,
+  onPage,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPage: (p: number) => void;
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min(total, (page + 1) * pageSize);
+  return (
+    <div className="flex items-center justify-between gap-4 mt-4 flex-wrap">
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+        {total === 0 ? "Aucun résultat" : `${from}–${to} sur ${total}`}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={page <= 0}
+          onClick={() => onPage(page - 1)}
+        >
+          ← Précédent
+        </Button>
+        <span className="text-sm text-zinc-600 dark:text-zinc-300 tabular-nums">
+          Page {page + 1} / {pages}
+        </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={page >= pages - 1}
+          onClick={() => onPage(page + 1)}
+        >
+          Suivant →
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`bg-white dark:bg-zinc-900 rounded-lg shadow border border-zinc-200 dark:border-zinc-800 ${className}`}>

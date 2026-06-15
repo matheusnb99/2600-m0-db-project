@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, Badge, Button, Input, Select, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
+
+const PAGE_SIZE = 25;
 
 export default function PersonnesPage() {
   const [personnes, setPersonnes] = useState<any[]>([]);
@@ -13,6 +15,8 @@ export default function PersonnesPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statut, setStatut] = useState("actif");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const perms = usePermissions();
 
   useEffect(() => {
@@ -20,10 +24,16 @@ export default function PersonnesPage() {
       setLoading(true);
       setError(null);
       try {
-        // apiClient forwards the Bearer token so the API can open the RLS /
+        // apiClient forwards the session cookie so the API can open the RLS /
         // Bell-LaPadula session — without it every classified row is hidden.
-        const data = (await apiClient.fetchPersonnes({ search, statut })) as any[];
+        const data = (await apiClient.fetchPersonnes({
+          search,
+          statut,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        })) as any[];
         setPersonnes(data);
+        setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
         setError((err as ApiError).message || "Erreur de chargement");
       } finally {
@@ -33,6 +43,11 @@ export default function PersonnesPage() {
 
     const timer = setTimeout(fetchPersonnes, 300);
     return () => clearTimeout(timer);
+  }, [search, statut, page]);
+
+  // Reset to the first page whenever the filters change.
+  useEffect(() => {
+    setPage(0);
   }, [search, statut]);
 
   const statutLabels: Record<string, string> = {
@@ -58,7 +73,7 @@ export default function PersonnesPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Personnes
           </h1>
-          {perms?.personnes && (
+          {perms?.insert?.personnes && (
             <Link href="/personnes/create">
               <Button variant="primary">➕ Nouvelle personne</Button>
             </Link>
@@ -91,7 +106,7 @@ export default function PersonnesPage() {
             </div>
             <div className="flex items-end">
               <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {personnes.length} résultat{personnes.length !== 1 ? "s" : ""}
+                {total} résultat{total !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -182,6 +197,15 @@ export default function PersonnesPage() {
             </table>
           </div>
         </Card>
+        )}
+
+        {!error && !loading && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPage={setPage}
+          />
         )}
       </div>
     </AdminLayout>

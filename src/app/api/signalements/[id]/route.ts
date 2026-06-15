@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { getSessionContext } from "@/lib/session";
 import { pgErrorResponse } from "@/lib/api-error";
 
@@ -12,20 +12,29 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const signalement = await queryOne(
-      `SELECT 
+    const session = getSessionContext(request);
+    const { id } = await params;
+
+    // `agents` is restricted (only magistrat/admin can read it), but several
+    // roles can read signalements — so don't JOIN agents in the main query,
+    // or the whole sheet 403s. Resolve the emitting agent separately and
+    // degrade to null on `permission denied`.
+    const signalement = await queryOne<{
+      emis_par_agent_id?: string;
+      [k: string]: unknown;
+    }>(
+      `SELECT
         s.id, s.personne_id, s.type, s.motif, s.date_emission, s.date_expiration,
         s.emis_par_service_id, s.emis_par_agent_id, s.niveau_classification_id,
         s.actif, s.priorite, s.date_creation, s.date_modification,
         p.nom, p.prenom, p.date_naissance, p.numero_taj,
-        sv.nom as service_nom, a.nom as agent_nom, a.prenom as agent_prenom
+        sv.nom as service_nom
        FROM signalements s
        JOIN personnes p ON p.id = s.personne_id
        LEFT JOIN services sv ON sv.id = s.emis_par_service_id
-       LEFT JOIN agents a ON a.id = s.emis_par_agent_id
        WHERE s.id = $1`,
-      [(await params).id],
-      getSessionContext(request)
+      [id],
+      session
     );
 
     if (!signalement) {
@@ -35,7 +44,29 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(signalement, { status: 200 });
+    let agent_nom: string | null = null;
+    let agent_prenom: string | null = null;
+    if (signalement.emis_par_agent_id) {
+      try {
+        const ag = await query<{ nom: string; prenom: string }>(
+          `SELECT nom, prenom FROM agents WHERE id = $1`,
+          [signalement.emis_par_agent_id],
+          session
+        );
+        if (ag[0]) {
+          agent_nom = ag[0].nom;
+          agent_prenom = ag[0].prenom;
+        }
+      } catch (e) {
+        if ((e as { code?: string }).code !== "42501") throw e;
+        // role can't read agents → leave agent name null
+      }
+    }
+
+    return NextResponse.json(
+      { ...signalement, agent_nom, agent_prenom },
+      { status: 200 }
+    );
   } catch (error) {
     return pgErrorResponse(error, "Erreur lors de la récupération du signalement");
   }

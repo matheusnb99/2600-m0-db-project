@@ -1,29 +1,44 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Badge, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Spinner, AccessDenied, Pagination } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import type { AuditLog } from "@/types";
 
+const PAGE_SIZE = 50;
+
 export default function AuditPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logs, setLogs] = useState<(AuditLog & { total_count?: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
 
   const [filterAction, setFilterAction] = useState<string>("");
   const [filterTable, setFilterTable] = useState<string>("");
   const [filterAlerts, setFilterAlerts] = useState<boolean>(false);
   const [searchAgent, setSearchAgent] = useState<string>("");
 
+  // action / table / alerte are filtered server-side (paginated); the agent-id
+  // search stays client-side on the current page.
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError(null);
     apiClient
-      .fetchAudit({ limit: 200 })
+      .fetchAudit({
+        action: filterAction || undefined,
+        table: filterTable || undefined,
+        alerte: filterAlerts ? "true" : undefined,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      })
       .then((data) => {
-        if (active) setLogs(data as AuditLog[]);
+        if (!active) return;
+        const rows = data as (AuditLog & { total_count?: number })[];
+        setLogs(rows);
+        setTotal(rows[0]?.total_count ?? 0);
       })
       .catch((err) => {
         if (active) setError((err as ApiError).message || "Erreur de chargement");
@@ -34,7 +49,11 @@ export default function AuditPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [filterAction, filterTable, filterAlerts, page]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [filterAction, filterTable, filterAlerts]);
 
   const severityLabels = {
     0: "Info",
@@ -68,14 +87,13 @@ export default function AuditPage() {
     "agents_secrets",
   ];
 
-  const filteredLogs = logs.filter((log) => {
-    if (filterAction && log.action !== filterAction) return false;
-    if (filterTable && log.table_cible !== filterTable) return false;
-    if (filterAlerts && !log.alerte) return false;
-    if (searchAgent && !log.agent_id?.includes(searchAgent)) return false;
-    return true;
-  });
+  // action/table/alerte are applied server-side; only the agent-id search is
+  // client-side, on the current page.
+  const filteredLogs = logs.filter(
+    (log) => !searchAgent || log.agent_id?.includes(searchAgent)
+  );
 
+  // Page-local counts (this page of results).
   const alertCount = logs.filter((l) => l.alerte).length;
   const criticalCount = logs.filter((l) => l.severite >= 4).length;
 
@@ -94,10 +112,10 @@ export default function AuditPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6">
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-              Total d'entrées
+              Total d&apos;entrées
             </p>
             <p className="text-3xl font-bold text-zinc-900 dark:text-white">
-              {logs.length}
+              {total}
             </p>
           </Card>
           <Card className="p-6 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10">
@@ -272,6 +290,15 @@ export default function AuditPage() {
             </div>
           )}
         </Card>
+        )}
+
+        {!error && !loading && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPage={setPage}
+          />
         )}
       </div>
     </AdminLayout>
