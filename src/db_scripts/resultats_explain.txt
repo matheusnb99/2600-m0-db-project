@@ -1,0 +1,296 @@
+=== REQUÊTE 1 : Recherche floue sur nom (GIN trigramme) ===
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34.17..34.19 rows=9 width=42) (actual time=1.654..1.657 rows=10.00 loops=1)
+   Buffers: shared hit=22
+   ->  Sort  (cost=34.17..34.19 rows=9 width=42) (actual time=1.653..1.654 rows=10.00 loops=1)
+         Sort Key: (similarity((nom)::text, 'DUPONT'::text)) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=22
+         ->  Seq Scan on personnes  (cost=0.00..34.02 rows=9 width=42) (actual time=0.228..1.622 rows=12.00 loops=1)
+               Filter: ((nom)::text % 'DUPONT'::text)
+               Rows Removed by Filter: 1188
+               Buffers: shared hit=19
+ Planning:
+   Buffers: shared hit=229
+ Planning Time: 1.643 ms
+ Execution Time: 1.741 ms
+(14 lignes)
+
+
+=== REQUÊTE 2 : Recherche exacte nom + prénom ===
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using idx_personnes_nom on personnes  (cost=0.28..8.30 rows=1 width=49) (actual time=0.026..0.027 rows=0.00 loops=1)
+   Index Cond: (((nom)::text = 'MARTIN'::text) AND ((prenom)::text = 'Pierre'::text))
+   Index Searches: 1
+   Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=7
+ Planning Time: 0.148 ms
+ Execution Time: 0.041 ms
+(8 lignes)
+
+
+=== REQUÊTE 3 : Signalements actifs avec priorité haute ===
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=18.18..18.19 rows=1 width=380) (actual time=0.066..0.067 rows=0.00 loops=1)
+   Sort Key: s.priorite DESC, s.date_emission DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=12
+   ->  Nested Loop  (cost=0.14..18.17 rows=1 width=380) (actual time=0.044..0.044 rows=0.00 loops=1)
+         Buffers: shared hit=6
+         ->  Seq Scan on signalements s  (cost=0.00..9.75 rows=1 width=66) (actual time=0.043..0.043 rows=0.00 loops=1)
+               Filter: (actif AND (priorite >= 4))
+               Rows Removed by Filter: 300
+               Buffers: shared hit=6
+         ->  Index Scan using services_pkey on services srv  (cost=0.14..8.16 rows=1 width=322) (never executed)
+               Index Cond: (id = s.emis_par_service_id)
+               Index Searches: 0
+ Planning:
+   Buffers: shared hit=186
+ Planning Time: 0.671 ms
+ Execution Time: 0.096 ms
+(17 lignes)
+
+
+=== REQUÊTE 4 : Affaires liées à une personne ===
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=127.99..129.24 rows=500 width=47) (actual time=0.454..0.456 rows=0.00 loops=1)
+   Sort Key: a.date_faits DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=40
+   InitPlan 1
+     ->  Limit  (cost=40.00..40.00 rows=1 width=24) (actual time=0.317..0.317 rows=1.00 loops=1)
+           Buffers: shared hit=22
+           ->  Sort  (cost=40.00..43.00 rows=1200 width=24) (actual time=0.316..0.316 rows=1.00 loops=1)
+                 Sort Key: (random())
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=22
+                 ->  Seq Scan on personnes  (cost=0.00..34.00 rows=1200 width=24) (actual time=0.032..0.137 rows=1200.00 loops=1)
+                       Buffers: shared hit=19
+   ->  Hash Join  (cost=27.50..65.57 rows=500 width=47) (actual time=0.448..0.448 rows=0.00 loops=1)
+         Hash Cond: (ap.affaire_id = a.id)
+         Buffers: shared hit=40
+         ->  Seq Scan on affaire_personnes ap  (cost=0.00..36.75 rows=500 width=20) (actual time=0.447..0.447 rows=0.00 loops=1)
+               Filter: (personne_id = (InitPlan 1).col1)
+               Rows Removed by Filter: 1500
+               Buffers: shared hit=40
+         ->  Hash  (cost=20.00..20.00 rows=600 width=59) (never executed)
+               ->  Seq Scan on affaires a  (cost=0.00..20.00 rows=600 width=59) (never executed)
+ Planning:
+   Buffers: shared hit=340
+ Planning Time: 1.128 ms
+ Execution Time: 0.522 ms
+(26 lignes)
+
+
+=== REQUÊTE 5 : Affaires en cours par niveau de classification ===
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=35.01..39.11 rows=182 width=44) (actual time=0.217..0.246 rows=4.00 loops=1)
+   Group Key: cn.niveau
+   Buffers: shared hit=22
+   ->  Sort  (cost=35.01..35.47 rows=182 width=32) (actual time=0.210..0.219 rows=182.00 loops=1)
+         Sort Key: cn.niveau DESC
+         Sort Method: quicksort  Memory: 30kB
+         Buffers: shared hit=22
+         ->  Nested Loop  (cost=0.16..28.18 rows=182 width=32) (actual time=0.032..0.185 rows=182.00 loops=1)
+               Buffers: shared hit=22
+               ->  Seq Scan on affaires a  (cost=0.00..21.50 rows=182 width=8) (actual time=0.009..0.090 rows=182.00 loops=1)
+                     Filter: (statut = 'en_cours'::statut_affaire)
+                     Rows Removed by Filter: 418
+                     Buffers: shared hit=14
+               ->  Memoize  (cost=0.16..0.44 rows=1 width=32) (actual time=0.000..0.000 rows=1.00 loops=182)
+                     Cache Key: a.niveau_classification_id
+                     Cache Mode: logical
+                     Hits: 178  Misses: 4  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                     Buffers: shared hit=8
+                     ->  Index Scan using classification_niveaux_pkey on classification_niveaux cn  (cost=0.15..0.43 rows=1 width=32) (actual time=0.006..0.006 rows=1.00 loops=4)
+                           Index Cond: (id = a.niveau_classification_id)
+                           Index Searches: 4
+                           Buffers: shared hit=8
+ Planning:
+   Buffers: shared hit=76
+ Planning Time: 0.513 ms
+ Execution Time: 0.281 ms
+(26 lignes)
+
+
+=== REQUÊTE 6 : Consultations récentes par agent ===
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=53.01..53.06 rows=20 width=51) (actual time=0.135..0.138 rows=20.00 loops=1)
+   Buffers: shared hit=31
+   InitPlan 1
+     ->  Limit  (cost=11.40..11.40 rows=1 width=24) (actual time=0.026..0.027 rows=1.00 loops=1)
+           Buffers: shared hit=2
+           ->  Sort  (cost=11.40..11.60 rows=80 width=24) (actual time=0.026..0.026 rows=1.00 loops=1)
+                 Sort Key: (random())
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=2
+                 ->  Seq Scan on agents  (cost=0.00..11.00 rows=80 width=24) (actual time=0.009..0.014 rows=50.00 loops=1)
+                       Buffers: shared hit=2
+   ->  Sort  (cost=41.61..41.66 rows=20 width=51) (actual time=0.134..0.135 rows=20.00 loops=1)
+         Sort Key: c.date_consultation DESC
+         Sort Method: quicksort  Memory: 27kB
+         Buffers: shared hit=31
+         ->  Bitmap Heap Scan on consultations c  (cost=4.58..41.17 rows=20 width=51) (actual time=0.055..0.105 rows=21.00 loops=1)
+               Recheck Cond: (agent_id = (InitPlan 1).col1)
+               Filter: (date_consultation >= (now() - '1 year'::interval))
+               Rows Removed by Filter: 19
+               Heap Blocks: exact=24
+               Buffers: shared hit=28
+               ->  Bitmap Index Scan on idx_consultations_agent  (cost=0.00..4.58 rows=40 width=0) (actual time=0.035..0.035 rows=40.00 loops=1)
+                     Index Cond: (agent_id = (InitPlan 1).col1)
+                     Index Searches: 1
+                     Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=196
+ Planning Time: 0.590 ms
+ Execution Time: 0.165 ms
+(29 lignes)
+
+
+=== REQUÊTE 7 : Alertes de sécurité haute sévérité ===
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=18.11..18.20 rows=34 width=51) (actual time=0.102..0.107 rows=33.00 loops=1)
+   Buffers: shared hit=11
+   ->  Sort  (cost=18.11..18.20 rows=34 width=51) (actual time=0.102..0.104 rows=33.00 loops=1)
+         Sort Key: horodatage DESC
+         Sort Method: quicksort  Memory: 27kB
+         Buffers: shared hit=11
+         ->  Seq Scan on audit_log al  (cost=0.00..17.25 rows=34 width=51) (actual time=0.024..0.091 rows=33.00 loops=1)
+               Filter: (alerte AND (severite >= 3))
+               Rows Removed by Filter: 467
+               Buffers: shared hit=11
+ Planning:
+   Buffers: shared hit=90
+ Planning Time: 0.310 ms
+ Execution Time: 0.118 ms
+(14 lignes)
+
+
+=== REQUÊTE 8 : Top 10 des infractions les plus fréquentes ===
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=37.07..37.09 rows=10 width=570) (actual time=0.418..0.419 rows=2.00 loops=1)
+   Buffers: shared hit=12
+   ->  Sort  (cost=37.07..37.29 rows=90 width=570) (actual time=0.417..0.418 rows=2.00 loops=1)
+         Sort Key: (count(ai.affaire_id)) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=12
+         ->  HashAggregate  (cost=34.23..35.13 rows=90 width=570) (actual time=0.404..0.405 rows=2.00 loops=1)
+               Group Key: i.code_natinf
+               Batches: 1  Memory Usage: 32kB
+               Buffers: shared hit=9
+               ->  Hash Join  (cost=12.03..30.23 rows=800 width=578) (actual time=0.041..0.263 rows=800.00 loops=1)
+                     Hash Cond: (ai.infraction_id = i.id)
+                     Buffers: shared hit=9
+                     ->  Seq Scan on affaire_infractions ai  (cost=0.00..16.00 rows=800 width=20) (actual time=0.010..0.088 rows=800.00 loops=1)
+                           Buffers: shared hit=8
+                     ->  Hash  (cost=10.90..10.90 rows=90 width=562) (actual time=0.016..0.017 rows=20.00 loops=1)
+                           Buckets: 1024  Batches: 1  Memory Usage: 10kB
+                           Buffers: shared hit=1
+                           ->  Seq Scan on infractions i  (cost=0.00..10.90 rows=90 width=562) (actual time=0.005..0.007 rows=20.00 loops=1)
+                                 Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=148
+ Planning Time: 0.521 ms
+ Execution Time: 0.447 ms
+(24 lignes)
+
+
+=== REQUÊTE 9 : Personnes avec fiche S + biométrie disponible ===
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=76.56..76.61 rows=20 width=51) (actual time=0.099..0.101 rows=0.00 loops=1)
+   Buffers: shared hit=11
+   ->  Sort  (cost=76.56..76.63 rows=30 width=51) (actual time=0.099..0.100 rows=0.00 loops=1)
+         Sort Key: (max(s.priorite)) DESC, (count(DISTINCT s.id)) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=11
+         ->  GroupAggregate  (cost=75.15..75.82 rows=30 width=51) (actual time=0.094..0.095 rows=0.00 loops=1)
+               Group Key: p.id
+               Buffers: shared hit=11
+               ->  Sort  (cost=75.15..75.22 rows=30 width=67) (actual time=0.094..0.095 rows=0.00 loops=1)
+                     Sort Key: p.id, s.id
+                     Sort Method: quicksort  Memory: 25kB
+                     Buffers: shared hit=11
+                     ->  Nested Loop  (cost=10.92..74.41 rows=30 width=67) (actual time=0.053..0.054 rows=0.00 loops=1)
+                           Join Filter: (s.personne_id = b.personne_id)
+                           Buffers: shared hit=8
+                           ->  Hash Join  (cost=10.65..46.87 rows=72 width=67) (actual time=0.052..0.053 rows=0.00 loops=1)
+                                 Hash Cond: (p.id = s.personne_id)
+                                 Buffers: shared hit=8
+                                 ->  Seq Scan on personnes p  (cost=0.00..31.00 rows=1200 width=31) (actual time=0.006..0.006 rows=1.00 loops=1)
+                                       Buffers: shared hit=2
+                                 ->  Hash  (cost=9.75..9.75 rows=72 width=36) (actual time=0.039..0.039 rows=0.00 loops=1)
+                                       Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                                       Buffers: shared hit=6
+                                       ->  Seq Scan on signalements s  (cost=0.00..9.75 rows=72 width=36) (actual time=0.039..0.039 rows=0.00 loops=1)
+                                             Filter: (actif AND (type = 'fiche_s'::type_signalement))
+                                             Rows Removed by Filter: 300
+                                             Buffers: shared hit=6
+                           ->  Index Scan using idx_biometrie_personne on biometrie b  (cost=0.27..0.37 rows=1 width=32) (never executed)
+                                 Index Cond: (personne_id = p.id)
+                                 Index Searches: 0
+ Planning:
+   Buffers: shared hit=103
+ Planning Time: 0.823 ms
+ Execution Time: 0.198 ms
+(35 lignes)
+
+
+=== REQUÊTE 10 : Décisions par juridiction et type (2 dernières années) ===
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=15.62..15.66 rows=15 width=48) (actual time=0.123..0.125 rows=12.00 loops=1)
+   Buffers: shared hit=8
+   ->  Sort  (cost=15.62..15.70 rows=30 width=48) (actual time=0.122..0.123 rows=12.00 loops=1)
+         Sort Key: (count(*)) DESC
+         Sort Method: quicksort  Memory: 26kB
+         Buffers: shared hit=8
+         ->  HashAggregate  (cost=14.58..14.88 rows=30 width=48) (actual time=0.108..0.110 rows=12.00 loops=1)
+               Group Key: juridiction, type
+               Batches: 1  Memory Usage: 32kB
+               Buffers: shared hit=8
+               ->  Seq Scan on decisions_justice dj  (cost=0.00..13.29 rows=104 width=36) (actual time=0.011..0.075 rows=104.00 loops=1)
+                     Filter: (date_decision >= (CURRENT_DATE - '2 years'::interval))
+                     Rows Removed by Filter: 198
+                     Buffers: shared hit=8
+ Planning:
+   Buffers: shared hit=79
+ Planning Time: 0.303 ms
+ Execution Time: 0.147 ms
+(18 lignes)
+
+
+=== RÉSUMÉ : Taille des tables et index ===
+                   Table / Index                   | Type  | Taille 
+---------------------------------------------------+-------+--------
+ consultations                                     | Table | 272 kB
+ idx_personnes_trgm_nom                            | Index | 272 kB
+ adresses                                          | Table | 200 kB
+ personnes                                         | Table | 152 kB
+ biometrie                                         | Table | 152 kB
+ affaire_personnes                                 | Table | 144 kB
+ affaires                                          | Table | 112 kB
+ affaire_personnes_affaire_id_personne_id_role_key | Index | 104 kB
+ telephones                                        | Table | 96 kB
+ idx_consultations_date                            | Index | 96 kB
+ audit_log                                         | Table | 88 kB
+ affaire_personnes_pkey                            | Index | 88 kB
+ adresses_pkey                                     | Index | 88 kB
+ consultations_pkey                                | Index | 88 kB
+ idx_adresses_personne                             | Index | 72 kB
+ decisions_justice                                 | Table | 64 kB
+ affaire_infractions                               | Table | 64 kB
+ scelles                                           | Table | 64 kB
+ idx_telephones_personne                           | Index | 56 kB
+ idx_telephones_numero                             | Index | 56 kB
+(20 lignes)
+
