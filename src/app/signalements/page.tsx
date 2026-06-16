@@ -2,15 +2,28 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
+import { Card, Badge, Button, Select, AccessDenied, Pagination } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
 
 const PAGE_SIZE = 24;
 
+interface SignalementRow {
+  id: number;
+  type: string;
+  priorite: number;
+  prenom: string;
+  nom: string;
+  date_naissance: string | null;
+  motif: string;
+  date_emission: string;
+  date_expiration: string | null;
+  total_count?: number;
+}
+
 export default function SignalementsPage() {
-  const [signalements, setSignalements] = useState<any[]>([]);
+  const [signalements, setSignalements] = useState<SignalementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState("all");
@@ -24,13 +37,13 @@ export default function SignalementsPage() {
       setLoading(true);
       setError(null);
       try {
-        const filters: Record<string, any> = {
+        const filters: Record<string, unknown> = {
           limit: PAGE_SIZE,
           offset: page * PAGE_SIZE,
         };
         if (type !== "all") filters.type = type;
         if (activeOnly) filters.actif = "true";
-        const data = (await apiClient.fetchSignalements(filters)) as any[];
+        const data = (await apiClient.fetchSignalements(filters)) as SignalementRow[];
         setSignalements(data);
         setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
@@ -42,10 +55,6 @@ export default function SignalementsPage() {
 
     fetchSignalements();
   }, [type, activeOnly, page]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [type, activeOnly]);
 
   const typeLabels: Record<string, string> = {
     fiche_s: "Fiche S",
@@ -92,7 +101,13 @@ export default function SignalementsPage() {
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Type
               </label>
-              <Select value={type} onChange={(e) => setType(e.target.value)}>
+              <Select
+                value={type}
+                onChange={(e) => {
+                  setType(e.target.value);
+                  setPage(0);
+                }}
+              >
                 <option value="all">Tous les types</option>
                 {Object.entries(typeLabels).map(([val, label]) => (
                   <option key={val} value={val}>
@@ -106,7 +121,10 @@ export default function SignalementsPage() {
                 <input
                   type="checkbox"
                   checked={activeOnly}
-                  onChange={(e) => setActiveOnly(e.target.checked)}
+                  onChange={(e) => {
+                    setActiveOnly(e.target.checked);
+                    setPage(0);
+                  }}
                   className="w-4 h-4 rounded"
                 />
                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">

@@ -32,3 +32,61 @@ export function roleById(id: number | undefined | null): RoleInfo | undefined {
 export function roleByName(nom: string | undefined | null): RoleInfo | undefined {
   return ROLES.find((r) => r.nom === nom);
 }
+
+/**
+ * Navigation entry + the page-level RBAC allowlist.
+ *
+ * Each deployment serves the WHOLE app to its one role, so "one microservice
+ * per role" decides *which* role reaches a deployment — not *which pages* that
+ * role may open inside it. Without this list every role saw every page (e.g.
+ * agent_saisie could open /admin/roles). `roles` restricts a page to the roles
+ * whose GRANTs justify it (db_scripts/07_roles_grants.sql); omit it for pages
+ * open to every authenticated role (the dashboard).
+ */
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  /** Role names allowed here. Omit = every authenticated role. */
+  roles?: string[];
+}
+
+export const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Tableau de bord", icon: "📊" },
+  // Données métier : rôles avec GRANT sur personnes/affaires/signalements.
+  { href: "/personnes", label: "Personnes", icon: "🧑", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
+  { href: "/affaires", label: "Affaires", icon: "📂", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
+  { href: "/signalements", label: "Signalements", icon: "🚨", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
+  // Administration : admin_systeme gère agents/services/rôles ; magistrat lit
+  // les agents de son service (SELECT, filtré RLS) ; auditeur lit l'audit.
+  { href: "/admin/agents", label: "Agents", icon: "👤", roles: ["admin_systeme", "magistrat"] },
+  { href: "/admin/services", label: "Services", icon: "🏢", roles: ["admin_systeme"] },
+  { href: "/admin/roles", label: "Rôles", icon: "🔐", roles: ["admin_systeme"] },
+  { href: "/admin/audit", label: "Audit", icon: "📋", roles: ["admin_systeme", "auditeur"] },
+  // Vues anonymisées : contrôle de conformité (jamais la donnée brute).
+  { href: "/conformite", label: "Vues anonymisées", icon: "🛡️", roles: ["auditeur", "controleur_cnil"] },
+];
+
+/** Nav entries a role may see: unrestricted ones, plus those listing the role. */
+export function navItemsForRole(roleName: string | undefined | null): NavItem[] {
+  return NAV_ITEMS.filter(
+    (i) => !i.roles || (roleName != null && i.roles.includes(roleName))
+  );
+}
+
+/**
+ * Whether `roleName` may view `pathname`. Matches the longest NAV_ITEMS href
+ * that prefixes the path, so sub-routes inherit their section's rule
+ * (/personnes/123 and /personnes/create follow /personnes). Paths under no
+ * known section (e.g. /login) are not part of the gated surface → allowed.
+ */
+export function canAccessPath(
+  roleName: string | undefined | null,
+  pathname: string
+): boolean {
+  const match = NAV_ITEMS.filter(
+    (i) => pathname === i.href || pathname.startsWith(i.href + "/")
+  ).sort((a, b) => b.href.length - a.href.length)[0];
+  if (!match || !match.roles) return true;
+  return roleName != null && match.roles.includes(roleName);
+}

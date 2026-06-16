@@ -47,7 +47,11 @@ export default function AgentsPage() {
   }, []);
 
   useEffect(() => {
-    loadAgents();
+    // Wrap so loadAgents() (which sets state) isn't called synchronously here.
+    const run = async () => {
+      await loadAgents();
+    };
+    run();
   }, [loadAgents]);
 
   const handleAddAgent = async (e: React.FormEvent<HTMLFormElement>) => {

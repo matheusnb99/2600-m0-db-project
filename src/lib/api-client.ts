@@ -8,7 +8,7 @@ export interface ApiError {
   status: number;
 }
 
-async function apiCall<T = any>(
+async function apiCall<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -57,7 +57,7 @@ export const apiClient = {
     }),
 
   // Agents
-  fetchAgents: (filters?: Record<string, any>) => {
+  fetchAgents: (filters?: Record<string, unknown>) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -72,13 +72,13 @@ export const apiClient = {
 
   fetchAgent: (id: string) => apiCall(`/agents/${id}`),
 
-  createAgent: (data: Record<string, any>) =>
+  createAgent: (data: Record<string, unknown>) =>
     apiCall("/agents", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updateAgent: (id: string, data: Record<string, any>) =>
+  updateAgent: (id: string, data: Record<string, unknown>) =>
     apiCall(`/agents/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -96,7 +96,7 @@ export const apiClient = {
     }),
 
   // Services
-  fetchServices: (filters?: Record<string, any>) => {
+  fetchServices: (filters?: Record<string, unknown>) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -111,13 +111,13 @@ export const apiClient = {
 
   fetchService: (id: number) => apiCall(`/services/${id}`),
 
-  createService: (data: Record<string, any>) =>
+  createService: (data: Record<string, unknown>) =>
     apiCall("/services", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updateService: (id: number, data: Record<string, any>) =>
+  updateService: (id: number, data: Record<string, unknown>) =>
     apiCall(`/services/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -131,7 +131,7 @@ export const apiClient = {
   // Roles
   fetchRoles: () => apiCall("/roles"),
 
-  createRole: (data: Record<string, any>) =>
+  createRole: (data: Record<string, unknown>) =>
     apiCall("/roles", {
       method: "POST",
       body: JSON.stringify(data),
@@ -141,7 +141,7 @@ export const apiClient = {
   fetchClassifications: () => apiCall("/classifications"),
 
   // Audit log
-  fetchAudit: (filters?: Record<string, any>) => {
+  fetchAudit: (filters?: Record<string, unknown>) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -155,7 +155,7 @@ export const apiClient = {
   },
 
   // Personnes
-  fetchPersonnes: (filters?: Record<string, any>) => {
+  fetchPersonnes: (filters?: Record<string, unknown>) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -170,13 +170,13 @@ export const apiClient = {
 
   fetchPersonne: (id: string) => apiCall(`/personnes/${id}`),
 
-  createPersonne: (data: Record<string, any>) =>
+  createPersonne: (data: Record<string, unknown>) =>
     apiCall("/personnes", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updatePersonne: (id: string, data: Record<string, any>) =>
+  updatePersonne: (id: string, data: Record<string, unknown>) =>
     apiCall(`/personnes/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -188,7 +188,7 @@ export const apiClient = {
     }),
 
   // Affaires
-  fetchAffaires: (filters?: Record<string, any>) => {
+  fetchAffaires: (filters?: Record<string, unknown>) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -203,13 +203,13 @@ export const apiClient = {
 
   fetchAffaire: (id: string) => apiCall(`/affaires/${id}`),
 
-  createAffaire: (data: Record<string, any>) =>
+  createAffaire: (data: Record<string, unknown>) =>
     apiCall("/affaires", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updateAffaire: (id: string, data: Record<string, any>) =>
+  updateAffaire: (id: string, data: Record<string, unknown>) =>
     apiCall(`/affaires/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -221,7 +221,7 @@ export const apiClient = {
     }),
 
   // Signalements
-  fetchSignalements: (filters?: Record<string, any>) => {
+  fetchSignalements: (filters?: Record<string, unknown>) => {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -236,13 +236,13 @@ export const apiClient = {
 
   fetchSignalement: (id: string) => apiCall(`/signalements/${id}`),
 
-  createSignalement: (data: Record<string, any>) =>
+  createSignalement: (data: Record<string, unknown>) =>
     apiCall("/signalements", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updateSignalement: (id: string, data: Record<string, any>) =>
+  updateSignalement: (id: string, data: Record<string, unknown>) =>
     apiCall(`/signalements/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),

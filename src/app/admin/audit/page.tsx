@@ -24,36 +24,32 @@ export default function AuditPage() {
   // search stays client-side on the current page.
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
-    apiClient
-      .fetchAudit({
-        action: filterAction || undefined,
-        table: filterTable || undefined,
-        alerte: filterAlerts ? "true" : undefined,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
-      })
-      .then((data) => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiClient.fetchAudit({
+          action: filterAction || undefined,
+          table: filterTable || undefined,
+          alerte: filterAlerts ? "true" : undefined,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        });
         if (!active) return;
         const rows = data as (AuditLog & { total_count?: number })[];
         setLogs(rows);
         setTotal(rows[0]?.total_count ?? 0);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (active) setError((err as ApiError).message || "Erreur de chargement");
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    };
+    load();
     return () => {
       active = false;
     };
   }, [filterAction, filterTable, filterAlerts, page]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [filterAction, filterTable, filterAlerts]);
 
   const severityLabels = {
     0: "Info",
@@ -103,7 +99,7 @@ export default function AuditPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Journal d'audit centralisé
+            Journal d&apos;audit centralisé
           </h1>
           <Button variant="primary">📥 Exporter logs</Button>
         </div>
@@ -148,7 +144,10 @@ export default function AuditPage() {
               </label>
               <Select
                 value={filterAction}
-                onChange={(e) => setFilterAction(e.target.value)}
+                onChange={(e) => {
+                  setFilterAction(e.target.value);
+                  setPage(0);
+                }}
               >
                 <option value="">Toutes</option>
                 {actions.map((action) => (
@@ -164,7 +163,10 @@ export default function AuditPage() {
               </label>
               <Select
                 value={filterTable}
-                onChange={(e) => setFilterTable(e.target.value)}
+                onChange={(e) => {
+                  setFilterTable(e.target.value);
+                  setPage(0);
+                }}
               >
                 <option value="">Toutes</option>
                 {tables.map((table) => (
@@ -189,7 +191,10 @@ export default function AuditPage() {
                 <input
                   type="checkbox"
                   checked={filterAlerts}
-                  onChange={(e) => setFilterAlerts(e.target.checked)}
+                  onChange={(e) => {
+                    setFilterAlerts(e.target.checked);
+                    setPage(0);
+                  }}
                   className="w-4 h-4 rounded"
                 />
                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">

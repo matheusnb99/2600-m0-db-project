@@ -8,7 +8,7 @@ import type { Role, RoleType, Classification } from "@/types";
 
 export default function RolesPage() {
   const perms = usePermissions();
-  const [roles, setRoles] = useState<Role[]>([
+  const [roles] = useState<Role[]>([
     {
       id: 1,
       nom: "agent_saisie",

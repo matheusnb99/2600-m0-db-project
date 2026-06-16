@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { pgErrorResponse } from "@/lib/api-error";
 
@@ -20,7 +20,7 @@ const TABLES = [
   "roles",
 ] as const;
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Table names come from the fixed list above — no injection surface.
     const cols = TABLES.flatMap((t) => [

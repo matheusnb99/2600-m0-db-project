@@ -55,7 +55,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Wrap in a local async fn so refresh() (which sets state) isn't called
+    // synchronously in the effect body.
+    const run = async () => {
+      await refresh();
+    };
+    run();
   }, [refresh]);
 
   const login = useCallback(

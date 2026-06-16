@@ -6,25 +6,92 @@ import { Card, Badge, Button, Spinner, AccessDenied } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 
+interface PersonInfo {
+  prenom: string;
+  nom: string;
+  numero_taj: string;
+  statut: string;
+  date_naissance: string | null;
+  sexe: string;
+  lieu_naissance: string | null;
+  nationalite: string;
+  niveau_classification_id: number;
+}
+interface PersonAlias {
+  id: number;
+  alias_prenom: string;
+  alias_nom: string;
+}
+interface PersonAddress {
+  id: number;
+  adresse_ligne1: string;
+  adresse_ligne2: string | null;
+  code_postal: string;
+  ville: string;
+  pays: string;
+  type: string;
+}
+interface PersonPhone {
+  id: number;
+  numero: string;
+  type: string;
+  actif: boolean;
+}
+interface PersonBiometric {
+  type: string;
+  count: string;
+}
+interface PersonCase {
+  affaire_id: number;
+  numero_pv: string;
+  role: string;
+  statut: string;
+}
+interface PersonAlert {
+  id: number;
+  type: string;
+  motif: string;
+  priorite: number;
+}
+interface PersonneDetail {
+  person: PersonInfo | null;
+  aliases: PersonAlias[];
+  addresses: PersonAddress[];
+  phones: PersonPhone[];
+  biometrics: PersonBiometric[];
+  cases: PersonCase[];
+  alerts: PersonAlert[];
+}
+
 export default function Page() {
     const params = useParams();
     const id = params.id as string;
 
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<PersonneDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
-        setLoading(true);
-        setError(null);
+        let active = true;
         // apiClient forwards the Bearer token so the RLS / Bell-LaPadula session
         // is opened — a server component could never read the localStorage token.
-        apiClient
-            .fetchPersonne(id)
-            .then((d) => setData(d))
-            .catch((err) => setError((err as ApiError).message || "Erreur de chargement"))
-            .finally(() => setLoading(false));
+        const load = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const d = await apiClient.fetchPersonne(id);
+                if (active) setData(d as PersonneDetail);
+            } catch (err) {
+                if (active) setError((err as ApiError).message || "Erreur de chargement");
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
     }, [id]);
 
     if (loading) {
@@ -43,15 +110,7 @@ export default function Page() {
         );
     }
 
-    const { person, aliases, addresses, phones, biometrics, cases, alerts } = data || {};
-    const sexLabels: Record<string, string> = { M: "Masculin", F: "Féminin", I: "Indéterminé" };
-    const statusLabels: Record<string, string> = {
-        actif: "Actif",
-        archive: "Archivé",
-        supprime: "Supprimé",
-    };
-
-    if(!person) {
+    if (!data || !data.person) {
         return (
             <AdminLayout>
                 <Card className="p-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
@@ -60,6 +119,15 @@ export default function Page() {
             </AdminLayout>
         );
     }
+
+    const person = data.person;
+    const { aliases, addresses, phones, biometrics, cases, alerts } = data;
+    const sexLabels: Record<string, string> = { M: "Masculin", F: "Féminin", I: "Indéterminé" };
+    const statusLabels: Record<string, string> = {
+        actif: "Actif",
+        archive: "Archivé",
+        supprime: "Supprimé",
+    };
 
     return (
     <AdminLayout>
@@ -132,7 +200,7 @@ export default function Page() {
                 🚨 Signalements actifs ({alerts.length})
             </h3>
             <div className="space-y-2">
-                {alerts.map((alert: any) => (
+                {alerts.map((alert) => (
                 <div key={alert.id} className="p-3 bg-white dark:bg-zinc-800 rounded border border-red-200 dark:border-red-800">
                     <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -162,7 +230,7 @@ export default function Page() {
                 <p className="text-sm text-zinc-500">Aucune adresse</p>
             ) : (
                 <div className="space-y-3">
-                {addresses.map((addr: any) => (
+                {addresses.map((addr) => (
                     <div key={addr.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
                     <p className="font-medium text-zinc-900 dark:text-white text-sm">
                         {addr.adresse_ligne1}
@@ -195,7 +263,7 @@ export default function Page() {
                 <p className="text-sm text-zinc-500">Aucun téléphone</p>
             ) : (
                 <div className="space-y-2">
-                {phones.map((phone: any) => (
+                {phones.map((phone) => (
                     <div
                     key={phone.id}
                     className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-800 rounded"
@@ -229,7 +297,7 @@ export default function Page() {
                 <p className="text-sm text-zinc-500">Aucun alias</p>
             ) : (
                 <div className="space-y-2">
-                {aliases.map((alias: any) => (
+                {aliases.map((alias) => (
                     <p key={alias.id} className="text-sm text-zinc-600 dark:text-zinc-400">
                     {alias.alias_prenom} {alias.alias_nom}
                     </p>
@@ -241,13 +309,13 @@ export default function Page() {
             {/* Biometrics */}
             <Card className="p-6">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                🔐 Données biométriques ({biometrics.reduce((sum: number, b: any) => sum + parseInt(b.count), 0)})
+                🔐 Données biométriques ({biometrics.reduce((sum, b) => sum + parseInt(b.count), 0)})
             </h3>
             {biometrics.length === 0 ? (
                 <p className="text-sm text-zinc-500">Aucune donnée biométrique</p>
             ) : (
                 <div className="space-y-2">
-                {biometrics.map((bio: any) => (
+                {biometrics.map((bio) => (
                     <p key={bio.type} className="text-sm text-zinc-600 dark:text-zinc-400">
                     {bio.type.replace(/_/g, " ")}: <strong>{bio.count}</strong>
                     </p>
@@ -264,7 +332,7 @@ export default function Page() {
                 📋 Affaires impliquées ({cases.length})
             </h3>
             <div className="space-y-2">
-                {cases.map((c: any) => (
+                {cases.map((c) => (
                 <div key={c.affaire_id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
                     <p className="font-medium text-zinc-900 dark:text-white">
                     {c.numero_pv}

@@ -65,6 +65,35 @@ export function AccessDenied({ message }: { message: string }) {
 }
 
 /**
+ * Shown inside the app shell when the signed-in role is not permitted to open
+ * the current page (application-level RBAC). Distinct from `AccessDenied`, which
+ * reports a *database* refusal: this fires before any query, on pages a role
+ * shouldn't reach at all. The sidebar stays visible so the user can navigate
+ * back to a section they can access.
+ */
+export function NotAuthorized({ roleLabel }: { roleLabel?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-20">
+      <div className="text-6xl mb-4">⛔</div>
+      <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+        Page non autorisée pour votre rôle
+      </h2>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-md">
+        Votre rôle
+        {roleLabel ? (
+          <>
+            {" "}
+            (<span className="font-mono font-semibold">{roleLabel}</span>)
+          </>
+        ) : null}{" "}
+        n&apos;a pas accès à cette page. Utilisez le menu pour revenir à une
+        section autorisée.
+      </p>
+    </div>
+  );
+}
+
+/**
  * Prev/Next pagination with a page indicator. `total` comes from the API
  * (COUNT(*) OVER()), `page` is 0-based.
  */

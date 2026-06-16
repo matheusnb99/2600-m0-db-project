@@ -6,16 +6,22 @@ import { Card, Button, Input, Select } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 
+interface ClassificationOption {
+  id: number;
+  code: string;
+  libelle: string;
+}
+
 export default function CreatePersonnePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [classifications, setClassifications] = useState<any[]>([]);
+  const [classifications, setClassifications] = useState<ClassificationOption[]>([]);
 
   useEffect(() => {
     apiClient
       .fetchClassifications()
-      .then((data) => setClassifications(data as any[]))
+      .then((data) => setClassifications(data as ClassificationOption[]))
       .catch(() => setClassifications([]));
   }, []);
 
