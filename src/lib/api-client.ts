@@ -131,6 +131,9 @@ export const apiClient = {
   // Roles
   fetchRoles: () => apiCall("/roles"),
 
+  // Live RBAC matrix from has_table_privilege (db_scripts/07).
+  fetchRoleGrants: () => apiCall("/roles/grants"),
+
   createRole: (data: Record<string, unknown>) =>
     apiCall("/roles", {
       method: "POST",

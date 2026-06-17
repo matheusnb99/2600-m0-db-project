@@ -164,18 +164,19 @@
     { key:"affaires",     label:"Affaires",     path:"/affaires" },
     { key:"signalements", label:"Signalements", path:"/signalements" },
     { key:"agents",       label:"Agents",       path:"/admin/agents" },
+    { key:"roles",        label:"Rôles",        path:"/admin/roles" },
     { key:"audit",        label:"Audit",        path:"/admin/audit" },
     { key:"conformite",   label:"Conformité",   path:"/conformite" },
   ];
   // 1 = accessible, 0 = bloqué — ordre = PAGES. email = compte de démo du rôle.
   const SERVICES = [
-    { port:3001, role:"agent_saisie",            lvl:"CD",  desc:"Saisie PV & données de base",      email:"nicole.laurent@interieur.gouv.fr",     acl:[1,1,1,0,0,0] },
-    { port:3002, role:"opj",                     lvl:"SD",  desc:"Officier de police judiciaire",    email:"matthieu.humbert@interieur.gouv.fr",   acl:[1,1,1,0,0,0] },
-    { port:3003, role:"magistrat",               lvl:"TSD", desc:"Supervision judiciaire",           email:"alexandria.denis@interieur.gouv.fr",   acl:[1,1,1,1,0,0] },
-    { port:3004, role:"analyste_renseignement",  lvl:"TSD", desc:"Analyse signalements / fiches S",  email:"maryse.olivier@interieur.gouv.fr",     acl:[1,1,1,0,0,0] },
-    { port:3005, role:"admin_systeme",           lvl:"NC",  desc:"Maintenance technique",            email:"isaac.marchal@interieur.gouv.fr",      acl:[0,0,0,1,1,0] },
-    { port:3006, role:"auditeur",                lvl:"vues",desc:"Contrôle conformité (anonymisé)",  email:"marguerite.lacroix@interieur.gouv.fr", acl:[0,0,0,0,1,1] },
-    { port:3007, role:"controleur_cnil",         lvl:"vues",desc:"Contrôle CNIL (anonymisé)",        email:"jean.bousquet@interieur.gouv.fr",      acl:[0,0,0,0,1,1] },
+    { port:3001, role:"agent_saisie",            lvl:"CD",  desc:"Saisie PV & données de base",      email:"nicole.laurent@interieur.gouv.fr",     acl:[1,1,1,0,0,0,0] },
+    { port:3002, role:"opj",                     lvl:"SD",  desc:"Officier de police judiciaire",    email:"matthieu.humbert@interieur.gouv.fr",   acl:[1,1,1,0,0,0,0] },
+    { port:3003, role:"magistrat",               lvl:"TSD", desc:"Supervision judiciaire",           email:"alexandria.denis@interieur.gouv.fr",   acl:[1,1,1,1,0,0,0] },
+    { port:3004, role:"analyste_renseignement",  lvl:"TSD", desc:"Analyse signalements / fiches S",  email:"maryse.olivier@interieur.gouv.fr",     acl:[1,1,1,0,0,0,0] },
+    { port:3005, role:"admin_systeme",           lvl:"NC",  desc:"Maintenance technique",            email:"isaac.marchal@interieur.gouv.fr",      acl:[0,0,0,1,1,1,0] },
+    { port:3006, role:"auditeur",                lvl:"vues",desc:"Contrôle conformité (anonymisé)",  email:"marguerite.lacroix@interieur.gouv.fr", acl:[0,0,0,0,0,1,1] },
+    { port:3007, role:"controleur_cnil",         lvl:"vues",desc:"Contrôle CNIL (anonymisé)",        email:"jean.bousquet@interieur.gouv.fr",      acl:[0,0,0,0,0,1,1] },
   ];
   const DEMO_PASSWORD = "Blackvault2026!";
 

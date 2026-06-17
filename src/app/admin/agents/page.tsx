@@ -9,6 +9,7 @@ import type { Agent, RoleType } from "@/types";
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [services, setServices] = useState<{ id: number; nom: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -54,6 +55,15 @@ export default function AgentsPage() {
     run();
   }, [loadAgents]);
 
+  // agents.service_id is NOT NULL, so the create form needs a service to pick.
+  // Loaded separately; failure leaves the list empty (the form then blocks).
+  useEffect(() => {
+    apiClient
+      .fetchServices()
+      .then((data) => setServices(data as { id: number; nom: string }[]))
+      .catch(() => setServices([]));
+  }, []);
+
   const handleAddAgent = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -64,6 +74,7 @@ export default function AgentsPage() {
         email: form.get("email"),
         matricule: form.get("matricule"),
         role_id: Number(form.get("role_id")) || null,
+        service_id: Number(form.get("service_id")) || null,
         habilitation_niveau_id: Number(form.get("habilitation_niveau_id")),
       });
       setShowForm(false);
@@ -153,6 +164,19 @@ export default function AgentsPage() {
                     {roles.map((role, idx) => (
                       <option key={role} value={idx + 1}>
                         {role}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Service
+                  </label>
+                  <Select name="service_id" required>
+                    <option value="">Sélectionner un service</option>
+                    {services.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nom}
                       </option>
                     ))}
                   </Select>

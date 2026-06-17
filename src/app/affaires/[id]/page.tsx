@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Card, Badge, Button } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 
 interface AffaireInfo {
   numero_pv: string;
@@ -55,6 +56,9 @@ export default function AffaireDetailPage() {
   const [data, setData] = useState<AffaireDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Only roles that may UPDATE affaires (agent_saisie, opj, magistrat) see
+  // "Éditer"; analyste_renseignement has SELECT only.
+  const perms = usePermissions();
 
   useEffect(() => {
     const fetchAffaire = async () => {
@@ -119,7 +123,9 @@ export default function AffaireDetailPage() {
               Ouvert le {new Date(affaire.date_ouverture).toLocaleDateString("fr-FR")}
             </p>
           </div>
-          <Button variant="secondary">Éditer</Button>
+          {perms?.update?.affaires && (
+            <Button variant="secondary">Éditer</Button>
+          )}
         </div>
 
         {/* Main Info */}

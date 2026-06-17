@@ -19,6 +19,7 @@ export default function AuditPage() {
   const [filterTable, setFilterTable] = useState<string>("");
   const [filterAlerts, setFilterAlerts] = useState<boolean>(false);
   const [searchAgent, setSearchAgent] = useState<string>("");
+  const [exporting, setExporting] = useState(false);
 
   // action / table / alerte are filtered server-side (paginated); the agent-id
   // search stays client-side on the current page.
@@ -89,6 +90,74 @@ export default function AuditPage() {
     (log) => !searchAgent || log.agent_id?.includes(searchAgent)
   );
 
+  // Export the WHOLE filtered result set (not just the current page) to CSV.
+  // Re-fetches with the active server-side filters and a high limit, applies the
+  // client-side agent search, then triggers a browser download. The audit_log
+  // is REVOKE'd from UPDATE/DELETE, so this read-only export is the only egress.
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const rows = (await apiClient.fetchAudit({
+        action: filterAction || undefined,
+        table: filterTable || undefined,
+        alerte: filterAlerts ? "true" : undefined,
+        limit: 10000,
+        offset: 0,
+      })) as (AuditLog & { total_count?: number })[];
+
+      const data = rows.filter(
+        (log) => !searchAgent || log.agent_id?.includes(searchAgent)
+      );
+
+      const columns = [
+        "horodatage",
+        "agent_id",
+        "action",
+        "table_cible",
+        "severite",
+        "alerte",
+        "type_alerte",
+        "details",
+      ] as const;
+
+      const escape = (v: unknown) => {
+        const s =
+          v == null
+            ? ""
+            : typeof v === "object"
+              ? JSON.stringify(v)
+              : String(v);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+
+      const csv = [
+        columns.join(","),
+        ...data.map((row) =>
+          columns
+            .map((c) => escape((row as unknown as Record<string, unknown>)[c]))
+            .join(",")
+        ),
+      ].join("\r\n");
+
+      // BOM so Excel reads UTF-8 accents correctly.
+      const blob = new Blob(["﻿" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError((err as ApiError).message || "Échec de l'export");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Page-local counts (this page of results).
   const alertCount = logs.filter((l) => l.alerte).length;
   const criticalCount = logs.filter((l) => l.severite >= 4).length;
@@ -101,7 +170,13 @@ export default function AuditPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Journal d&apos;audit centralisé
           </h1>
-          <Button variant="primary">📥 Exporter logs</Button>
+          <Button
+            variant="primary"
+            onClick={handleExport}
+            disabled={exporting || loading}
+          >
+            {exporting ? "Export…" : "📥 Exporter logs"}
+          </Button>
         </div>
 
         {/* Stats */}

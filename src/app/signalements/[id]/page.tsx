@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { Card, Badge, Button } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -9,6 +10,7 @@ import { usePermissions } from "@/lib/use-permissions";
 
 interface SignalementDetail {
   id: number;
+  personne_id: string;
   type: string;
   priorite: number;
   actif: boolean;
@@ -177,7 +179,9 @@ export default function SignalementDetailPage() {
                   : ""}
               </p>
             </div>
-            <Button variant="secondary">Voir fiche</Button>
+            <Link href={`/personnes/${signalement.personne_id}`}>
+              <Button variant="secondary">Voir fiche</Button>
+            </Link>
           </div>
         </Card>
 

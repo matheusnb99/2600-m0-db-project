@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Card, Badge, Button, Spinner, AccessDenied } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
 
 interface PersonInfo {
   prenom: string;
@@ -70,6 +71,10 @@ export default function Page() {
     const [data, setData] = useState<PersonneDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // Real GRANTs of the connected role (has_table_privilege). Only show
+    // "Éditer" to roles that may UPDATE personnes (agent_saisie, opj) — the DB
+    // would reject the others anyway, so we never offer the action.
+    const perms = usePermissions();
 
     useEffect(() => {
         if (!id) return;
@@ -143,7 +148,9 @@ export default function Page() {
             </p>
             </div>
             <div className="flex gap-2">
-            <Button variant="secondary">Éditer</Button>
+            {perms?.update?.personnes && (
+                <Button variant="secondary">Éditer</Button>
+            )}
             <Button variant="secondary">Historique</Button>
             </div>
         </div>
