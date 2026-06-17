@@ -19,12 +19,20 @@ DB_USER    = "postgres"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SCRIPTS = [
-    ("01_types_et_extensions.sql", "01 — Extensions et types ENUM"),
-    ("02_tables_principales.sql",  "02 — Tables principales"),
-    ("03_tables_leurres.sql",      "03 — Tables leurres (Deception)"),
-    ("04_donnees_reference.sql",   "04 — Données de référence"),
-    ("05_seed_data.sql",           "05 — Seed data (1200+ lignes)"),
-    ("06_vues.sql",                "06 — Vues anonymisées CNIL"),
+    ("01_types_et_extensions.sql",     "01 — Extensions et types ENUM"),
+    ("02_tables_principales.sql",      "02 — Tables principales"),
+    ("03_tables_leurres.sql",          "03 — Tables leurres (Deception)"),
+    ("04_donnees_reference.sql",       "04 — Données de référence"),
+    ("05_seed_data.sql",               "05 — Seed data (1200+ lignes)"),
+    ("06_vues.sql",                    "06 — Vues anonymisées CNIL"),
+    ("07_roles_grants.sql",            "07 — Rôles RBAC + GRANT"),
+    # 09 AVANT 08 : les policies RLS (08) appellent fn_session_level/fn_niveau_*
+    # qui sont définies au script 09. La numérotation des fichiers est trompeuse.
+    ("09_fonctions_triggers_blp.sql",  "09 — Fonctions + triggers BLP"),
+    ("08_rls_policies.sql",            "08 — Policies RLS (Bell-LaPadula)"),
+    ("10_grant_user_owner.sql",        "10 — Utilisateurs de connexion + niveaux session"),
+    ("11_demo_accounts.sql",           "11 — Comptes de démonstration"),
+    ("12_proprietaires_fonctions.sql", "12 — Propriété des fonctions SECURITY DEFINER"),
 ]
 
 # ============================================================
@@ -51,12 +59,19 @@ def run_psql(sql=None, fichier=None):
     - fichier: chemin vers un fichier .sql à charger
     """
     cmd = ["sudo", "-u", DB_USER, "psql", "-d", DB_NAME, "-q"]
+    stdin_data = None
     if sql:
         cmd += ["-c", sql]
     elif fichier:
-        cmd += ["-f", fichier]
+        # psql tourne via `sudo -u DB_USER` : cet utilisateur ne peut PAS lire les
+        # fichiers sous /home (perms 700). On lit donc le fichier ici (utilisateur
+        # courant) et on l'envoie à psql par stdin (`-f -`), ce qui évite tout
+        # « Permission denied » et conserve le support des méta-commandes (\set…).
+        with open(fichier, "r", encoding="utf-8") as f:
+            stdin_data = f.read()
+        cmd += ["-f", "-"]
 
-    resultat = subprocess.run(cmd, capture_output=True, text=True)
+    resultat = subprocess.run(cmd, capture_output=True, text=True, input=stdin_data)
 
     if resultat.returncode != 0:
         error(f"Erreur psql :\n{resultat.stderr}")

@@ -112,29 +112,12 @@ ALTER ROLE taj_admin     SET app.session_level = '0';  -- admin_systeme         
 ALTER ROLE taj_auditor   SET app.session_level = '3';  -- auditeur               → TSD (vues)
 ALTER ROLE taj_cnil      SET app.session_level = '2';  -- controleur_cnil        → SD (vues)
 
--- ============================================================================
--- 4ter. PROPRIÉTÉ DES FONCTIONS RLS « SECURITY DEFINER » (correctif récursion)
--- ----------------------------------------------------------------------------
--- Les helpers fn_service_agent / fn_niveau_* / fn_habilitation_agent sont
--- SECURITY DEFINER : ils doivent lire agents/personnes/affaires SANS re-déclencher
--- la RLS, sinon une policy qui interroge sa propre table boucle à l'infini.
--- Cas concret : la policy owner_select_agents (08) appelle fn_service_agent(),
--- qui fait « SELECT … FROM agents » → sous FORCE ROW LEVEL SECURITY la policy se
--- ré-applique → fn_service_agent s'auto-appelle → ERROR 54001 (stack depth).
---
--- SECURITY DEFINER ne contourne la RLS QUE si le propriétaire de la fonction
--- contourne lui-même la RLS. Ces fonctions sont créées par taj_owner (script 09,
--- NOSUPERUSER) → pas de bypass → récursion. On rétablit le bypass en les faisant
--- appartenir à postgres (superuser, qui ignore toujours la RLS, même FORCE).
--- Doit s'exécuter en superuser (ce script est lancé en postgres).
--- ----------------------------------------------------------------------------
-ALTER FUNCTION fn_service_agent(uuid)      OWNER TO postgres;
-ALTER FUNCTION fn_habilitation_agent(uuid) OWNER TO postgres;
-ALTER FUNCTION fn_niveau_personne(uuid)    OWNER TO postgres;
-ALTER FUNCTION fn_niveau_affaire(uuid)     OWNER TO postgres;
+-- Le correctif de PROPRIÉTÉ des fonctions SECURITY DEFINER (récursion RLS +
+-- écriture audit_log) a été déplacé dans le script 12_proprietaires_fonctions.sql,
+-- qui couvre l'ensemble des fonctions concernées en un seul endroit.
 
 -- ============================================================================
--- 4ter. CONNEXION DIRECTE PAR LES RÔLES DE GROUPE (option lisibilité démo)
+-- 4quater. CONNEXION DIRECTE PAR LES RÔLES DE GROUPE (option lisibilité démo)
 -- ----------------------------------------------------------------------------
 -- Par défaut les 7 rôles RBAC sont NOLOGIN (script 07) : ce sont des rôles de
 -- groupe portés par les utilisateurs taj_* ci-dessus. Pour pouvoir aussi
