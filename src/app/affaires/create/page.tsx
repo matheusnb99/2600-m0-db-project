@@ -7,23 +7,34 @@ import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
+import { useAuth } from "@/context/AuthContext";
 
 interface ClassificationOption {
   id: number;
   code: string;
   libelle: string;
+  niveau: number;
 }
 interface ServiceOption {
   id: number;
   nom: string;
 }
 
+/** Current Bell-LaPadula working level from the `taj_level` cookie, if any. */
+function workingLevelFromCookie(): number | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(/(?:^|; )taj_level=(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
 export default function CreateAffairePage() {
   const router = useRouter();
+  const { agent } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [classifications, setClassifications] = useState<ClassificationOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
+  const [classifId, setClassifId] = useState<string>("");
   // The list page hides the "Nouvelle affaire" link for roles without INSERT,
   // but this form is also reachable by direct URL — guard it here too.
   const perms = usePermissions();
@@ -31,13 +42,19 @@ export default function CreateAffairePage() {
   useEffect(() => {
     apiClient
       .fetchClassifications()
-      .then((data) => setClassifications(data as ClassificationOption[]))
+      .then((data) => {
+        const cls = data as ClassificationOption[];
+        setClassifications(cls);
+        const lvl = workingLevelFromCookie() ?? agent?.habilitation_niveau ?? null;
+        const match = lvl != null ? cls.find((c) => c.niveau === lvl) : undefined;
+        if (match) setClassifId(String(match.id));
+      })
       .catch(() => setClassifications([]));
     apiClient
       .fetchServices()
       .then((data) => setServices(data as ServiceOption[]))
       .catch(() => setServices([]));
-  }, []);
+  }, [agent]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -170,7 +187,12 @@ export default function CreateAffairePage() {
                 <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                   Classification *
                 </label>
-                <Select name="niveau_classification_id" required>
+                <Select
+                  name="niveau_classification_id"
+                  required
+                  value={classifId}
+                  onChange={(e) => setClassifId(e.target.value)}
+                >
                   <option value="">Sélectionner une classification</option>
                   {classifications.map((c) => (
                     <option key={c.id} value={c.id}>

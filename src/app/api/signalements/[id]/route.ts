@@ -84,8 +84,10 @@ export async function PUT(
     const body = await request.json();
     const { motif, date_expiration, actif, priorite } = body;
 
+    const session = getSessionContext(request);
+    const sigId = (await params).id;
     const updated = await queryOne(
-      `UPDATE signalements 
+      `UPDATE signalements
        SET motif = COALESCE($1, motif),
            date_expiration = COALESCE($2, date_expiration),
            actif = COALESCE($3, actif),
@@ -95,11 +97,31 @@ export async function PUT(
        RETURNING id, personne_id, type, motif, date_emission, date_expiration,
                  emis_par_service_id, niveau_classification_id, actif, priorite,
                  date_creation, date_modification`,
-      [motif, date_expiration, actif, priorite, (await params).id],
-      getSessionContext(request)
+      [motif, date_expiration, actif, priorite, sigId],
+      session
     );
 
     if (!updated) {
+      // Visible (SELECT: niveau ≤ session) but classification ≠ session level ⇒
+      // blocked by No-Write-Down, not actually missing. Distinguish the two.
+      const existing = await queryOne<{ niveau: number }>(
+        `SELECT cn.niveau FROM signalements s
+         JOIN classification_niveaux cn ON cn.id = s.niveau_classification_id
+         WHERE s.id = $1`,
+        [sigId],
+        session
+      );
+      if (existing) {
+        const labels = ["NC", "CD", "SD", "TSD"];
+        const lvl = labels[existing.niveau] ?? String(existing.niveau);
+        return NextResponse.json(
+          {
+            message: `Modification refusée par la classification (Bell-LaPadula) : ce signalement est classé ${lvl}. Passez votre niveau de session de travail à ${lvl} (barre du haut) pour le modifier.`,
+            code: "BLP_LEVEL",
+          },
+          { status: 403 }
+        );
+      }
       return NextResponse.json(
         { message: "Signalement non trouvé" },
         { status: 404 }

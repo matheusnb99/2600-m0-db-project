@@ -33,8 +33,27 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [whoami, setWhoami] = useState<WhoAmI | null>(null);
   const [whoamiReady, setWhoamiReady] = useState(false);
+  // Chosen Bell-LaPadula working level (null until read from the cookie).
+  const [workLevel, setWorkLevel] = useState<number | null>(null);
   const { agent, isLoading, logout } = useAuth();
   const pathname = usePathname();
+
+  // Initialise the working-level selector from the `taj_level` cookie, clamped
+  // to the agent's clearance. No cookie ⇒ default to full clearance.
+  useEffect(() => {
+    if (!agent) return;
+    const max = agent.habilitation_niveau ?? 0;
+    const m = document.cookie.match(/(?:^|; )taj_level=(\d+)/);
+    const v = m ? parseInt(m[1], 10) : max;
+    setWorkLevel(Math.max(0, Math.min(v, max)));
+  }, [agent]);
+
+  // Set the cookie and reload so every request + on-screen data uses the new
+  // level (the server re-clamps it to ≤ habilitation regardless).
+  const changeWorkLevel = (v: number) => {
+    document.cookie = `taj_level=${v}; path=/; max-age=${8 * 60 * 60}; samesite=lax`;
+    window.location.reload();
+  };
 
   // Auth gate: once /api/auth/me has resolved, an unauthenticated visitor is
   // bounced to the central auth service (:3000), carrying a return URL.
@@ -191,6 +210,31 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Niveau de session Bell-LaPadula (≤ habilitation, abaissable) */}
+            {agent && workLevel !== null && (
+              <label
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 cursor-pointer"
+                title="Niveau de session de travail (Bell-LaPadula). Abaissez-le sous votre habilitation pour écrire à un niveau de classification inférieur (No Write Down)."
+              >
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                  Session
+                </span>
+                <select
+                  value={workLevel}
+                  onChange={(e) => changeWorkLevel(Number(e.target.value))}
+                  className="bg-transparent text-xs font-mono font-semibold text-sky-300 focus:outline-none cursor-pointer"
+                >
+                  {Array.from(
+                    { length: (agent.habilitation_niveau ?? 0) + 1 },
+                    (_, i) => i
+                  ).map((l) => (
+                    <option key={l} value={l} className="bg-[#10141c] text-zinc-100">
+                      {NIVEAU_LABELS[String(l)]} ({l})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {/* Identité de connexion BDD (rôle taj_* basculable pour la démo) */}
             {whoami?.db_role && (
               <div

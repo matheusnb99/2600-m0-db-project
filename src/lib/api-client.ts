@@ -212,6 +212,29 @@ export const apiClient = {
       body: JSON.stringify(data),
     }),
 
+  // Judicial decisions on a case (magistrat only).
+  createDecision: (affaireId: string, data: Record<string, unknown>) =>
+    apiCall(`/affaires/${affaireId}/decisions`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // NATINF catalogue + attaching an infraction to a case.
+  fetchInfractions: () => apiCall("/infractions"),
+
+  addInfraction: (affaireId: string, infraction_id: number) =>
+    apiCall(`/affaires/${affaireId}/infractions`, {
+      method: "POST",
+      body: JSON.stringify({ infraction_id }),
+    }),
+
+  // Evidence / seals on a case (opj only).
+  addScelle: (affaireId: string, data: Record<string, unknown>) =>
+    apiCall(`/affaires/${affaireId}/scelles`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   updateAffaire: (id: string, data: Record<string, unknown>) =>
     apiCall(`/affaires/${id}`, {
       method: "PUT",

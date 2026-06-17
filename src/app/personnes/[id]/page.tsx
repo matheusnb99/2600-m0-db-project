@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { Card, Badge, Button, Input, Select, Spinner, ApiErrorView, ClassificationTag, SectionTitle } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -466,17 +467,32 @@ export default function Page() {
             </SectionTitle>
             <div className="space-y-2">
                 {cases.map((c) => (
-                <div key={c.affaire_id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
-                    <p className="font-medium text-zinc-900 dark:text-white">
-                    {c.numero_pv}
-                    </p>
-                    <div className="flex gap-2 mt-1">
-                    <Badge>{c.role}</Badge>
-                    <Badge variant="default">
-                        {c.statut.replace(/_/g, " ")}
-                    </Badge>
+                <Link
+                    key={c.affaire_id}
+                    href={`/affaires/${c.affaire_id}`}
+                    className="group flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-sky-500/30 hover:bg-white/[0.04]"
+                >
+                    <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
+                        <Icon name="folder" className="w-4 h-4" />
+                    </span>
+                    <div>
+                        <p className="font-medium font-mono text-white group-hover:text-sky-200 transition-colors">
+                        {c.numero_pv}
+                        </p>
+                        <div className="flex gap-2 mt-1">
+                        <Badge>{c.role}</Badge>
+                        <Badge variant="default">
+                            {c.statut.replace(/_/g, " ")}
+                        </Badge>
+                        </div>
                     </div>
-                </div>
+                    </div>
+                    <Icon
+                    name="arrowRight"
+                    className="w-4 h-4 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-400"
+                    />
+                </Link>
                 ))}
             </div>
             </Card>

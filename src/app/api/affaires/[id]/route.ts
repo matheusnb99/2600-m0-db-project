@@ -138,8 +138,10 @@ export async function PUT(
       niveau_classification_id,
     } = body;
 
+    const session = getSessionContext(request);
+    const affaireId = (await params).id;
     const updated = await queryOne(
-      `UPDATE affaires 
+      `UPDATE affaires
        SET description = COALESCE($1, description),
            lieu_faits = COALESCE($2, lieu_faits),
            statut = COALESCE($3, statut),
@@ -155,12 +157,33 @@ export async function PUT(
         statut,
         date_cloture,
         niveau_classification_id,
-        (await params).id,
+        affaireId,
       ],
-      getSessionContext(request)
+      session
     );
 
     if (!updated) {
+      // The UPDATE matched no row. Either the affaire doesn't exist, or it's
+      // visible (SELECT: niveau ≤ session) but its classification ≠ the session
+      // level so the No-Write-Down policy blocked the write. Tell them which.
+      const existing = await queryOne<{ niveau: number }>(
+        `SELECT cn.niveau FROM affaires a
+         JOIN classification_niveaux cn ON cn.id = a.niveau_classification_id
+         WHERE a.id = $1`,
+        [affaireId],
+        session
+      );
+      if (existing) {
+        const labels = ["NC", "CD", "SD", "TSD"];
+        const lvl = labels[existing.niveau] ?? String(existing.niveau);
+        return NextResponse.json(
+          {
+            message: `Modification refusée par la classification (Bell-LaPadula) : cette affaire est classée ${lvl}. Passez votre niveau de session de travail à ${lvl} (barre du haut) pour la modifier.`,
+            code: "BLP_LEVEL",
+          },
+          { status: 403 }
+        );
+      }
       return NextResponse.json(
         { message: "Affaire non trouvée" },
         { status: 404 }

@@ -6,7 +6,10 @@ import { useState, useEffect } from "react";
 export interface TablePerms {
   personnes: boolean;
   affaires: boolean;
+  affaire_infractions: boolean;
   signalements: boolean;
+  decisions_justice: boolean;
+  scelles: boolean;
   agents: boolean;
   services: boolean;
   roles: boolean;

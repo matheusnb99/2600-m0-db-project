@@ -15,6 +15,15 @@ import type { SessionContext } from "./db";
 /** Name of the JWT cookie shared across all services on the host. */
 export const TOKEN_COOKIE = "taj_token";
 
+/**
+ * Cookie carrying the chosen Bell-LaPadula "working level" (0..3). The agent may
+ * *lower* their session level to write to lower-classified rows (No Write Down
+ * means a high-clearance subject must step down to touch low data). It is read
+ * and **clamped** server-side to `≤ habilitation`, so a tampered cookie can never
+ * grant more than the agent's cleared maximum.
+ */
+export const LEVEL_COOKIE = "taj_level";
+
 function readCookie(request: Request, name: string): string | null {
   const header = request.headers.get("cookie");
   if (!header) return null;
@@ -51,12 +60,20 @@ export function getSessionContext(request: Request): SessionContext | null {
     return null;
   }
 
-  // `habilitation_niveau` is the BLP level 0..3 embedded at login. Default to
-  // 0 (NC) if a legacy token without it is presented.
-  const niveau =
+  // `habilitation_niveau` is the BLP clearance 0..3 embedded at login — the
+  // agent's MAXIMUM. Default to 0 (NC) if a legacy token without it is presented.
+  const habilitation =
     typeof payload.habilitation_niveau === "number"
       ? payload.habilitation_niveau
       : 0;
+
+  // Effective session level = the chosen working level, clamped to [0, max].
+  // No cookie → work at full clearance (back-compatible default).
+  const raw = readCookie(request, LEVEL_COOKIE);
+  const wanted = raw != null ? parseInt(raw, 10) : NaN;
+  const niveau = Number.isInteger(wanted)
+    ? Math.max(0, Math.min(wanted, habilitation))
+    : habilitation;
 
   return { agentId: String(payload.agent_id), niveau };
 }

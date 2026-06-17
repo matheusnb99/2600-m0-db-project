@@ -39,6 +39,19 @@ export function pgErrorResponse(
 
     switch (error.code) {
       case "42501": {
+        // A WITH CHECK row-level-security rejection on INSERT/UPDATE — i.e. the
+        // No-Write-Down rule: the row's classification must equal the current
+        // session level. Point the user at the session-level selector.
+        if (/row.?level security/i.test(raw)) {
+          return NextResponse.json(
+            {
+              message:
+                "Écriture refusée par la classification (Bell-LaPadula) : la classification de la donnée doit correspondre à votre niveau de session de travail. Ajustez « Session » dans la barre du haut.",
+              code: error.code,
+            },
+            { status: 403 }
+          );
+        }
         // RBAC table denial OR Bell-LaPadula / Biba trigger refusal.
         const denied = raw.match(
           /permission denied for (?:table|relation|view|sequence) (\w+)/i

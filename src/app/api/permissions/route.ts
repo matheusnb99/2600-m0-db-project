@@ -14,7 +14,10 @@ import { pgErrorResponse } from "@/lib/api-error";
 const TABLES = [
   "personnes",
   "affaires",
+  "affaire_infractions",
   "signalements",
+  "decisions_justice",
+  "scelles",
   "agents",
   "services",
   "roles",

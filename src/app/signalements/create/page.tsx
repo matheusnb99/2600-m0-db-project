@@ -13,6 +13,14 @@ interface ClassificationOption {
   id: number;
   code: string;
   libelle: string;
+  niveau: number;
+}
+
+/** Current Bell-LaPadula working level from the `taj_level` cookie, if any. */
+function workingLevelFromCookie(): number | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(/(?:^|; )taj_level=(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
 }
 interface ServiceOption {
   id: number;
@@ -50,6 +58,9 @@ export default function CreateSignalementPage() {
   const [error, setError] = useState<string | null>(null);
   const [classifications, setClassifications] = useState<ClassificationOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
+  // Default classification = the agent's current working level, since the write
+  // policy requires the row's level to equal the session level.
+  const [classifId, setClassifId] = useState<string>("");
 
   // Person picker state
   const [search, setSearch] = useState("");
@@ -60,13 +71,20 @@ export default function CreateSignalementPage() {
   useEffect(() => {
     apiClient
       .fetchClassifications()
-      .then((data) => setClassifications(data as ClassificationOption[]))
+      .then((data) => {
+        const cls = data as ClassificationOption[];
+        setClassifications(cls);
+        // Preselect the classification matching the current working level.
+        const lvl = workingLevelFromCookie() ?? agent?.habilitation_niveau ?? null;
+        const match = lvl != null ? cls.find((c) => c.niveau === lvl) : undefined;
+        if (match) setClassifId(String(match.id));
+      })
       .catch(() => setClassifications([]));
     apiClient
       .fetchServices()
       .then((data) => setServices(data as ServiceOption[]))
       .catch(() => setServices([]));
-  }, []);
+  }, [agent]);
 
   // Debounced person search (RLS-filtered server-side, like the list page).
   useEffect(() => {
@@ -296,7 +314,12 @@ export default function CreateSignalementPage() {
                   <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                     Classification *
                   </label>
-                  <Select name="niveau_classification_id" required defaultValue="">
+                  <Select
+                    name="niveau_classification_id"
+                    required
+                    value={classifId}
+                    onChange={(e) => setClassifId(e.target.value)}
+                  >
                     <option value="" disabled>
                       Sélectionner
                     </option>
