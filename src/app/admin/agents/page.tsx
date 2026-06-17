@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Badge, Button, Input, Select, Spinner, AccessDenied, ClassificationTag } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Spinner, ApiErrorView, ClassificationTag } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -12,9 +12,11 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [services, setServices] = useState<{ id: number; nom: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  // One-time credentials returned by POST /api/agents — shown until dismissed.
+  const [created, setCreated] = useState<{ matricule: string; email: string; temp_password: string } | null>(null);
   const perms = usePermissions();
 
   const roles: RoleType[] = [
@@ -42,7 +44,7 @@ export default function AgentsPage() {
       const data = (await apiClient.fetchAgents()) as Agent[];
       setAgents(data);
     } catch (err) {
-      setError((err as ApiError).message || "Erreur de chargement");
+      setError(err as ApiError);
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function AgentsPage() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     try {
-      await apiClient.createAgent({
+      const res = (await apiClient.createAgent({
         prenom: form.get("prenom"),
         nom: form.get("nom"),
         email: form.get("email"),
@@ -77,11 +79,15 @@ export default function AgentsPage() {
         role_id: Number(form.get("role_id")) || null,
         service_id: Number(form.get("service_id")) || null,
         habilitation_niveau_id: Number(form.get("habilitation_niveau_id")),
-      });
+      })) as { matricule: string; email: string; temp_password?: string };
       setShowForm(false);
+      // Surface the one-time password so the admin can hand it to the agent.
+      if (res?.temp_password) {
+        setCreated({ matricule: res.matricule, email: res.email, temp_password: res.temp_password });
+      }
       await loadAgents();
     } catch (err) {
-      setError((err as ApiError).message || "Erreur lors de la création");
+      setError(err as ApiError);
     }
   };
 
@@ -90,7 +96,7 @@ export default function AgentsPage() {
       await apiClient.updateAgent(agent.id, { actif: !agent.actif });
       await loadAgents();
     } catch (err) {
-      setError((err as ApiError).message || "Erreur lors de la mise à jour");
+      setError(err as ApiError);
     }
   };
 
@@ -99,7 +105,7 @@ export default function AgentsPage() {
       await apiClient.unlockAgent(id);
       await loadAgents();
     } catch (err) {
-      setError((err as ApiError).message || "Erreur lors du déverrouillage");
+      setError(err as ApiError);
     }
   };
 
@@ -124,6 +130,37 @@ export default function AgentsPage() {
             </Button>
           )}
         </div>
+
+        {/* One-time credentials for the freshly created agent */}
+        {created && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-5 vault-fade-up">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+                  <Icon name="shieldCheck" className="w-5 h-5" />
+                </span>
+                <div>
+                  <p className="font-semibold text-emerald-200">Agent créé — mot de passe provisoire</p>
+                  <p className="text-sm text-emerald-300/80 mt-0.5">
+                    Transmettez-le à <span className="font-mono">{created.matricule}</span> ({created.email}).
+                    Il ne sera affiché qu&apos;une seule fois.
+                  </p>
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-black/30 px-3 py-1.5">
+                    <Icon name="lock" className="w-4 h-4 text-emerald-300" />
+                    <code className="font-mono text-sm text-emerald-200 select-all">{created.temp_password}</code>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setCreated(null)}
+                className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="Masquer"
+              >
+                <Icon name="ban" className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         {showForm && (
@@ -217,7 +254,7 @@ export default function AgentsPage() {
         {loading ? (
           <Spinner label="Chargement des agents…" />
         ) : error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={loadAgents} />
         ) : (
         /* Table */
         <Card className="overflow-hidden">

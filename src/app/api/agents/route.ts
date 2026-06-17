@@ -1,6 +1,8 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { query, queryOne } from "@/lib/db";
 import { getSessionContext } from "@/lib/session";
+import { hashPassword } from "@/lib/auth";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Agent } from "@/types";
 
@@ -103,17 +105,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create agent with default password
-    const defaultPassword = Buffer.from(`${matricule}:TempPassword123!`).toString(
-      "base64"
-    );
+    // Generate a random one-time password and store its bcrypt hash. Login
+    // compares with bcrypt, so storing anything other than a real `$2a$…` hash
+    // would silently lock the account out. The cleartext is returned ONCE so the
+    // admin can hand it over; the agent should change it on first login.
+    const tempPassword = crypto.randomBytes(9).toString("base64url");
+    const passwordHash = await hashPassword(tempPassword);
 
     const newAgent = await queryOne<Agent>(
-      `INSERT INTO agents (matricule, nom, prenom, email, role_id, service_id, 
-       habilitation_niveau_id, mot_de_passe_hash, actif, tentatives_echouees, 
+      `INSERT INTO agents (matricule, nom, prenom, email, role_id, service_id,
+       habilitation_niveau_id, mot_de_passe_hash, actif, tentatives_echouees,
        verrouille, date_creation, date_modification)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 0, false, NOW(), NOW())
-       RETURNING id, matricule, nom, prenom, email, role_id, service_id, 
+       RETURNING id, matricule, nom, prenom, email, role_id, service_id,
                  habilitation_niveau_id, actif, tentatives_echouees, verrouille,
                  date_creation, date_modification`,
       [
@@ -124,12 +128,15 @@ export async function POST(request: NextRequest) {
         role_id,
         service_id,
         habilitation_niveau_id,
-        defaultPassword,
+        passwordHash,
       ],
       session
     );
 
-    return NextResponse.json(newAgent, { status: 201 });
+    return NextResponse.json(
+      { ...newAgent, temp_password: tempPassword },
+      { status: 201 }
+    );
   } catch (error) {
     return pgErrorResponse(error, "Erreur lors de la création de l'agent");
   }

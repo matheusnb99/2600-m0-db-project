@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, queryOne } from "@/lib/db";
+import { getSessionContext } from "@/lib/session";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Role } from "@/types";
 
@@ -28,6 +29,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = getSessionContext(request);
     const body = await request.json();
     const { nom, description, niveau_max_classification_id } = body;
 
@@ -42,7 +44,8 @@ export async function POST(request: NextRequest) {
     // Check if role already exists
     const existing = await queryOne(
       `SELECT id FROM roles WHERE nom = $1`,
-      [nom]
+      [nom],
+      session
     );
 
     if (existing) {
@@ -57,7 +60,8 @@ export async function POST(request: NextRequest) {
       `INSERT INTO roles (nom, description, niveau_max_classification_id)
        VALUES ($1, $2, $3)
        RETURNING id, nom, description, niveau_max_classification_id`,
-      [nom, description, niveau_max_classification_id]
+      [nom, description, niveau_max_classification_id],
+      session
     );
 
     return NextResponse.json(newRole, { status: 201 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Badge, Button, Input, Select, Spinner, AccessDenied, Pagination } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Spinner, ApiErrorView, Pagination } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -12,7 +12,7 @@ const PAGE_SIZE = 50;
 export default function AuditPage() {
   const [logs, setLogs] = useState<(AuditLog & { total_count?: number })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
 
@@ -42,7 +42,7 @@ export default function AuditPage() {
         setLogs(rows);
         setTotal(rows[0]?.total_count ?? 0);
       } catch (err) {
-        if (active) setError((err as ApiError).message || "Erreur de chargement");
+        if (active) setError(err as ApiError);
       } finally {
         if (active) setLoading(false);
       }
@@ -153,7 +153,7 @@ export default function AuditPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError((err as ApiError).message || "Échec de l'export");
+      setError(err as ApiError);
     } finally {
       setExporting(false);
     }
@@ -284,7 +284,7 @@ export default function AuditPage() {
         {loading ? (
           <Spinner label="Chargement du journal d'audit…" />
         ) : error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={() => location.reload()} />
         ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">

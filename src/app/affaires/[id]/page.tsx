@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Card, Badge, Button, SectionTitle } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, SectionTitle, ApiErrorView } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -56,7 +56,10 @@ export default function AffaireDetailPage() {
 
   const [data, setData] = useState<AffaireDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
   // Only roles that may UPDATE affaires (agent_saisie, opj, magistrat) see
   // "Éditer"; analyste_renseignement has SELECT only.
   const perms = usePermissions();
@@ -68,7 +71,7 @@ export default function AffaireDetailPage() {
         const affaire = await apiClient.fetchAffaire(id);
         setData(affaire as AffaireDetail);
       } catch (err) {
-        setError((err as ApiError).message || "Erreur de chargement");
+        setError(err as ApiError);
       } finally {
         setLoading(false);
       }
@@ -76,6 +79,30 @@ export default function AffaireDetailPage() {
 
     if (id) fetchAffaire();
   }, [id]);
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSaving(true);
+    setEditErr(null);
+    const form = new FormData(e.currentTarget);
+    const payload = {
+      statut: form.get("statut") || null,
+      lieu_faits: form.get("lieu_faits") || null,
+      description: form.get("description") || null,
+      date_cloture: form.get("date_cloture") || null,
+    };
+    try {
+      const updated = (await apiClient.updateAffaire(id, payload)) as Partial<AffaireInfo>;
+      setData((prev) =>
+        prev ? { ...prev, affaire: { ...prev.affaire, ...updated } } : prev
+      );
+      setEditing(false);
+    } catch (err) {
+      setEditErr((err as ApiError).message || "Erreur lors de la mise à jour");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading)
     return (
@@ -89,12 +116,19 @@ export default function AffaireDetailPage() {
       </AdminLayout>
     );
 
-  if (error || !data)
+  if (error)
+    return (
+      <AdminLayout>
+        <ApiErrorView error={error} onRetry={() => location.reload()} />
+      </AdminLayout>
+    );
+
+  if (!data)
     return (
       <AdminLayout>
         <div className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-6 flex items-center gap-3">
           <Icon name="alertTriangle" className="w-5 h-5 text-red-400" />
-          <p className="text-red-200">{error || "Affaire introuvable"}</p>
+          <p className="text-red-200">Affaire introuvable</p>
         </div>
       </AdminLayout>
     );
@@ -134,9 +168,65 @@ export default function AffaireDetailPage() {
             </div>
           </div>
           {perms?.update?.affaires && (
-            <Button variant="secondary">Éditer</Button>
+            <Button
+              variant={editing ? "secondary" : "primary"}
+              onClick={() => { setEditErr(null); setEditing((v) => !v); }}
+            >
+              {editing ? "Fermer" : (<><Icon name="document" className="w-4 h-4" />Éditer</>)}
+            </Button>
           )}
         </div>
+
+        {/* Inline edit panel */}
+        {editing && perms?.update?.affaires && (
+          <Card className="p-6">
+            <SectionTitle icon={<Icon name="document" className="w-4 h-4" />}>
+              Modifier l&apos;affaire
+            </SectionTitle>
+            {editErr && (
+              <div className="mb-4 p-3.5 rounded-lg bg-red-500/[0.08] border border-red-500/30 flex items-start gap-2.5">
+                <Icon name="alertTriangle" className="w-4 h-4 mt-0.5 shrink-0 text-red-400" />
+                <p className="text-red-300 text-sm">{editErr}</p>
+              </div>
+            )}
+            <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Statut</label>
+                <Select name="statut" defaultValue={affaire.statut}>
+                  <option value="en_cours">En cours</option>
+                  <option value="cloturee">Clôturée</option>
+                  <option value="classee_sans_suite">Classée sans suite</option>
+                  <option value="renvoyee_justice">Renvoyée en justice</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Date de clôture</label>
+                <Input type="date" name="date_cloture" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Lieu des faits</label>
+                <Input name="lieu_faits" defaultValue={affaire.lieu_faits ?? ""} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Description</label>
+                <textarea
+                  name="description"
+                  rows={4}
+                  defaultValue={affaire.description ?? ""}
+                  className="w-full px-3.5 py-2 rounded-lg border border-white/10 bg-[#0b0e14] text-zinc-100 placeholder:text-zinc-500 transition-colors focus:outline-none focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
+              <div className="md:col-span-2 flex gap-3 pt-2">
+                <Button type="submit" variant="primary" disabled={saving}>
+                  {saving ? "Enregistrement…" : "Enregistrer"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                  Annuler
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         {/* Main Info */}
         <Card className="p-6">

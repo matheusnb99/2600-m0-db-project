@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Card, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
+import { Card, Button, Input, Select, Spinner, ApiErrorView } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -48,7 +48,7 @@ export default function RolesPage() {
   const [classifications, setClassifications] = useState<Classification[]>([]);
   const [grants, setGrants] = useState<GrantMatrix>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +66,7 @@ export default function RolesPage() {
       setClassifications(c);
       setGrants(g);
     } catch (err) {
-      setError((err as ApiError).message || "Erreur de chargement");
+      setError(err as ApiError);
     } finally {
       setLoading(false);
     }
@@ -251,7 +251,7 @@ export default function RolesPage() {
         {loading ? (
           <Spinner label="Lecture des rôles et des GRANTs…" />
         ) : error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={loadAll} />
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             {roles.map((role) => {

@@ -10,6 +10,22 @@ import bcrypt from "bcryptjs";
 const BCRYPT_ROUNDS = 12;
 
 /**
+ * The signing key for the (hand-rolled) JWT. Fail hard if it is missing or left
+ * at the template placeholder — a silent fallback like `"secret"` would let
+ * anyone forge a token for any agent/role. docker-compose already requires the
+ * var (`JWT_SECRET:?…`); this guards local/dev runs too.
+ */
+function jwtSecret(): string {
+  const s = process.env.JWT_SECRET;
+  if (!s || s.length < 16 || s === "your-secret-key-here-min-32-chars-long") {
+    throw new Error(
+      "JWT_SECRET manquant ou non configuré — définissez une vraie clé (≥ 32 caractères) dans .env"
+    );
+  }
+  return s;
+}
+
+/**
  * Hash a password with bcrypt (cost 12), matching the format stored in
  * `agents.mot_de_passe_hash` by the seed data (`$2a$12$…`).
  */
@@ -46,7 +62,7 @@ export function generateToken(payload: Record<string, unknown>): string {
   ).toString("base64");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64");
   const signature = crypto
-    .createHmac("sha256", process.env.JWT_SECRET || "secret")
+    .createHmac("sha256", jwtSecret())
     .update(`${header}.${body}`)
     .digest("base64");
 
@@ -60,14 +76,21 @@ export function generateToken(payload: Record<string, unknown>): string {
 export function verifyToken(token: string): Record<string, unknown> | null {
   try {
     const [header, body, signature] = token.split(".");
+    if (!header || !body || !signature) return null;
 
-    // Verify signature
+    // Verify signature with a constant-time comparison (avoids leaking the
+    // expected signature through timing).
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.JWT_SECRET || "secret")
+      .createHmac("sha256", jwtSecret())
       .update(`${header}.${body}`)
       .digest("base64");
 
-    if (signature !== expectedSignature) {
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (
+      sigBuf.length !== expBuf.length ||
+      !crypto.timingSafeEqual(sigBuf, expBuf)
+    ) {
       return null;
     }
 

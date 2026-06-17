@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Card, Badge, Button, SectionTitle } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, SectionTitle, ApiErrorView } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -32,8 +32,11 @@ export default function SignalementDetailPage() {
 
   const [signalement, setSignalement] = useState<SignalementDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
   const perms = usePermissions();
 
   useEffect(() => {
@@ -43,7 +46,7 @@ export default function SignalementDetailPage() {
         const data = await apiClient.fetchSignalement(id);
         setSignalement(data as SignalementDetail);
       } catch (err) {
-        setError((err as ApiError).message || "Erreur de chargement");
+        setError(err as ApiError);
       } finally {
         setLoading(false);
       }
@@ -51,6 +54,27 @@ export default function SignalementDetailPage() {
 
     if (id) fetchSignalement();
   }, [id]);
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSaving(true);
+    setEditErr(null);
+    const form = new FormData(e.currentTarget);
+    const payload = {
+      motif: form.get("motif") || null,
+      date_expiration: form.get("date_expiration") || null,
+      priorite: Number(form.get("priorite")),
+    };
+    try {
+      const updated = await apiClient.updateSignalement(id, payload);
+      setSignalement((prev) => (prev ? { ...prev, ...(updated as Partial<SignalementDetail>) } : prev));
+      setEditing(false);
+    } catch (err) {
+      setEditErr((err as ApiError).message || "Erreur lors de la mise à jour");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleDeactivate = async () => {
     if (!window.confirm("Désactiver ce signalement ?")) return;
@@ -78,12 +102,19 @@ export default function SignalementDetailPage() {
       </AdminLayout>
     );
 
-  if (error || !signalement)
+  if (error)
+    return (
+      <AdminLayout>
+        <ApiErrorView error={error} onRetry={() => location.reload()} />
+      </AdminLayout>
+    );
+
+  if (!signalement)
     return (
       <AdminLayout>
         <div className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-6 flex items-center gap-3">
           <Icon name="alertTriangle" className="w-5 h-5 text-red-400" />
-          <p className="text-red-200">{error || "Signalement introuvable"}</p>
+          <p className="text-red-200">Signalement introuvable</p>
         </div>
       </AdminLayout>
     );
@@ -123,7 +154,12 @@ export default function SignalementDetailPage() {
           </div>
           {perms?.update?.signalements && (
             <div className="flex gap-2">
-              <Button variant="secondary">Éditer</Button>
+              <Button
+                variant={editing ? "secondary" : "primary"}
+                onClick={() => { setEditErr(null); setEditing((v) => !v); }}
+              >
+                {editing ? "Fermer" : (<><Icon name="document" className="w-4 h-4" />Éditer</>)}
+              </Button>
               {signalement.actif && (
                 <Button
                   variant="danger"
@@ -136,6 +172,57 @@ export default function SignalementDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Inline edit panel */}
+        {editing && perms?.update?.signalements && (
+          <Card className="p-6">
+            <SectionTitle icon={<Icon name="document" className="w-4 h-4" />}>
+              Modifier le signalement
+            </SectionTitle>
+            {editErr && (
+              <div className="mb-4 p-3.5 rounded-lg bg-red-500/[0.08] border border-red-500/30 flex items-start gap-2.5">
+                <Icon name="alertTriangle" className="w-4 h-4 mt-0.5 shrink-0 text-red-400" />
+                <p className="text-red-300 text-sm">{editErr}</p>
+              </div>
+            )}
+            <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Priorité</label>
+                <Select name="priorite" defaultValue={signalement.priorite}>
+                  <option value={0}>P0 — Basse</option>
+                  <option value={1}>P1 — Normale</option>
+                  <option value={2}>P2 — Haute</option>
+                  <option value={3}>P3 — Critique</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Date d&apos;expiration</label>
+                <Input
+                  type="date"
+                  name="date_expiration"
+                  defaultValue={signalement.date_expiration ? signalement.date_expiration.slice(0, 10) : ""}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Motif</label>
+                <textarea
+                  name="motif"
+                  rows={3}
+                  defaultValue={signalement.motif}
+                  className="w-full px-3.5 py-2 rounded-lg border border-white/10 bg-[#0b0e14] text-zinc-100 placeholder:text-zinc-500 transition-colors focus:outline-none focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
+              <div className="md:col-span-2 flex gap-3 pt-2">
+                <Button type="submit" variant="primary" disabled={saving}>
+                  {saving ? "Enregistrement…" : "Enregistrer"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                  Annuler
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         {/* Status Alert */}
         {!signalement.actif && (

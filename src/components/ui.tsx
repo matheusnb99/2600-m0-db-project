@@ -102,6 +102,54 @@ export function AccessDenied({ message }: { message: string }) {
 }
 
 /**
+ * Renders a failed request appropriately: a real RBAC/RLS refusal (HTTP 403)
+ * shows the security-themed `AccessDenied`; anything else (500, network, etc.)
+ * shows a neutral error with an optional retry — so a server hiccup no longer
+ * masquerades as "access denied by the database".
+ */
+export function ApiErrorView({
+  error,
+  onRetry,
+}: {
+  error: { message?: string; status?: number };
+  onRetry?: () => void;
+}) {
+  if (error.status === 403) {
+    return <AccessDenied message={error.message ?? "Accès refusé."} />;
+  }
+  const isNetwork = error.status === 0 || error.status === undefined;
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 vault-fade-up">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30">
+          <Icon name="alertTriangle" className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-amber-200">
+            {isNetwork ? "Connexion au serveur impossible" : "Une erreur est survenue"}
+          </p>
+          <p className="text-sm text-amber-300/90 mt-1">
+            {error.message ?? "Réessayez dans un instant."}
+            {error.status ? (
+              <span className="text-amber-300/60"> (HTTP {error.status})</span>
+            ) : null}
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-1.5 text-sm text-amber-100 ring-1 ring-inset ring-amber-500/30 hover:bg-white/[0.1] transition-colors cursor-pointer"
+            >
+              <Icon name="refresh" className="w-4 h-4" />
+              Réessayer
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Shown inside the app shell when the signed-in role is not permitted to open
  * the current page (application-level RBAC). Distinct from `AccessDenied`, which
  * reports a *database* refusal: this fires before any query, on pages a role

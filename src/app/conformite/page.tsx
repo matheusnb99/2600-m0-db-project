@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Badge, Spinner, AccessDenied } from "@/components/ui";
+import { Card, Badge, Spinner, ApiErrorView } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 
@@ -29,21 +29,23 @@ export default function ConformitePage() {
   const [stats, setStats] = useState<StatCnil[]>([]);
   const [personnes, setPersonnes] = useState<PersonneAnonymisee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message?: string; status?: number } | null>(null);
 
   useEffect(() => {
     // Session cookie is sent automatically (same-origin).
     fetch("/api/conformite", { credentials: "same-origin" })
       .then(async (r) => {
         const data = await r.json();
-        if (!r.ok) throw new Error(data.message || "Erreur de chargement");
+        // Keep the HTTP status so a real 403 (RBAC refusal) renders AccessDenied
+        // while a 500/network error shows a neutral, retryable message.
+        if (!r.ok) throw { message: data.message || "Erreur de chargement", status: r.status };
         return data;
       })
       .then((data) => {
         setStats(data.statistiques || []);
         setPersonnes(data.personnes || []);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setError({ message: err?.message, status: err?.status }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -71,7 +73,7 @@ export default function ConformitePage() {
         {loading ? (
           <Spinner label="Chargement des vues de conformité…" />
         ) : error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={() => location.reload()} />
         ) : (
           <>
             {/* Statistiques CNIL */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryOne } from "@/lib/db";
+import { getSessionContext } from "@/lib/session";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Service } from "@/types";
 
@@ -16,7 +17,8 @@ export async function GET(
       `SELECT id, nom, type, adresse, code_unite, telephone, email, actif, date_creation
        FROM services
        WHERE id = $1`,
-      [parseInt((await params).id)]
+      [parseInt((await params).id)],
+      getSessionContext(request)
     );
 
     if (!service) {
@@ -41,13 +43,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = getSessionContext(request);
     const body = await request.json();
     const { nom, adresse, telephone, email, actif } = body;
 
     // Check if service exists
     const existing = await queryOne(
       `SELECT id FROM services WHERE id = $1`,
-      [parseInt((await params).id)]
+      [parseInt((await params).id)],
+      session
     );
 
     if (!existing) {
@@ -67,7 +71,8 @@ export async function PUT(
            actif = COALESCE($5, actif)
        WHERE id = $6
        RETURNING id, nom, type, adresse, code_unite, telephone, email, actif, date_creation`,
-      [nom, adresse, telephone, email, actif, parseInt((await params).id)]
+      [nom, adresse, telephone, email, actif, parseInt((await params).id)],
+      session
     );
 
     return NextResponse.json(updated, { status: 200 });
@@ -86,11 +91,12 @@ export async function DELETE(
 ) {
   try {
     const deleted = await queryOne<Service>(
-      `UPDATE services 
+      `UPDATE services
        SET actif = false
        WHERE id = $1
        RETURNING id, nom, type, adresse, code_unite, telephone, email, actif, date_creation`,
-      [parseInt((await params).id)]
+      [parseInt((await params).id)],
+      getSessionContext(request)
     );
 
     if (!deleted) {

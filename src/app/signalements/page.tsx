@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, Badge, Button, Select, AccessDenied, Pagination } from "@/components/ui";
+import { Card, Badge, Button, Select, ApiErrorView, Pagination } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -26,7 +26,7 @@ interface SignalementRow {
 export default function SignalementsPage() {
   const [signalements, setSignalements] = useState<SignalementRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [type, setType] = useState("all");
   const [activeOnly, setActiveOnly] = useState(true);
   const [page, setPage] = useState(0);
@@ -48,7 +48,7 @@ export default function SignalementsPage() {
         setSignalements(data);
         setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
-        setError((err as ApiError).message || "Erreur de chargement");
+        setError(err as ApiError);
       } finally {
         setLoading(false);
       }
@@ -149,7 +149,7 @@ export default function SignalementsPage() {
 
         {/* Results Grid */}
         {error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={() => location.reload()} />
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {loading ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Badge, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Spinner, ApiErrorView } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -11,7 +11,7 @@ import type { Service, ServiceType } from "@/types";
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const perms = usePermissions();
@@ -23,7 +23,7 @@ export default function ServicesPage() {
       const data = (await apiClient.fetchServices()) as Service[];
       setServices(data);
     } catch (err) {
-      setError((err as ApiError).message || "Erreur de chargement");
+      setError(err as ApiError);
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ export default function ServicesPage() {
       setShowForm(false);
       await loadServices();
     } catch (err) {
-      setError((err as ApiError).message || "Erreur lors de la création");
+      setError(err as ApiError);
     }
   };
 
@@ -91,7 +91,7 @@ export default function ServicesPage() {
       await apiClient.updateService(service.id, { actif: !service.actif });
       await loadServices();
     } catch (err) {
-      setError((err as ApiError).message || "Erreur lors de la mise à jour");
+      setError(err as ApiError);
     }
   };
 
@@ -189,7 +189,7 @@ export default function ServicesPage() {
         {loading ? (
           <Spinner label="Chargement des services…" />
         ) : error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={loadServices} />
         ) : services.length === 0 ? (
           <Card className="p-8 text-center text-zinc-500">
             Aucun service visible pour ce rôle.

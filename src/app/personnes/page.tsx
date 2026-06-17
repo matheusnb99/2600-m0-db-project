@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, ApiErrorView, Pagination } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -24,7 +24,7 @@ interface PersonneRow {
 export default function PersonnesPage() {
   const [personnes, setPersonnes] = useState<PersonneRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [search, setSearch] = useState("");
   const [statut, setStatut] = useState("actif");
   const [page, setPage] = useState(0);
@@ -47,7 +47,7 @@ export default function PersonnesPage() {
         setPersonnes(data);
         setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
-        setError((err as ApiError).message || "Erreur de chargement");
+        setError(err as ApiError);
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function PersonnesPage() {
 
         {/* Results */}
         {error ? (
-          <AccessDenied message={error} />
+          <ApiErrorView error={error} onRetry={() => location.reload()} />
         ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">

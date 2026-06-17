@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Card, Badge, Button, Spinner, AccessDenied, ClassificationTag, SectionTitle } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Spinner, ApiErrorView, ClassificationTag, SectionTitle } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
@@ -71,11 +71,23 @@ export default function Page() {
 
     const [data, setData] = useState<PersonneDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<ApiError | null>(null);
+    // Inline edit (gated by the DB UPDATE grant — see perms below).
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [editErr, setEditErr] = useState<string | null>(null);
+    const [classifications, setClassifications] = useState<{ id: number; code: string; libelle: string }[]>([]);
     // Real GRANTs of the connected role (has_table_privilege). Only show
     // "Éditer" to roles that may UPDATE personnes (agent_saisie, opj) — the DB
     // would reject the others anyway, so we never offer the action.
     const perms = usePermissions();
+
+    useEffect(() => {
+        apiClient
+            .fetchClassifications()
+            .then((d) => setClassifications(d as { id: number; code: string; libelle: string }[]))
+            .catch(() => setClassifications([]));
+    }, []);
 
     useEffect(() => {
         if (!id) return;
@@ -89,7 +101,7 @@ export default function Page() {
                 const d = await apiClient.fetchPersonne(id);
                 if (active) setData(d as PersonneDetail);
             } catch (err) {
-                if (active) setError((err as ApiError).message || "Erreur de chargement");
+                if (active) setError(err as ApiError);
             } finally {
                 if (active) setLoading(false);
             }
@@ -99,6 +111,34 @@ export default function Page() {
             active = false;
         };
     }, [id]);
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setSaving(true);
+        setEditErr(null);
+        const form = new FormData(e.currentTarget);
+        const payload = {
+            nom: form.get("nom"),
+            prenom: form.get("prenom"),
+            date_naissance: form.get("date_naissance") || null,
+            lieu_naissance: form.get("lieu_naissance") || null,
+            nationalite: form.get("nationalite") || null,
+            sexe: form.get("sexe") || null,
+            niveau_classification_id: Number(form.get("niveau_classification_id")) || null,
+            statut: form.get("statut") || null,
+        };
+        try {
+            const updated = (await apiClient.updatePersonne(id, payload)) as Partial<PersonInfo>;
+            setData((prev) =>
+                prev && prev.person ? { ...prev, person: { ...prev.person, ...updated } } : prev
+            );
+            setEditing(false);
+        } catch (err) {
+            setEditErr((err as ApiError).message || "Erreur lors de la mise à jour");
+        } finally {
+            setSaving(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -111,7 +151,7 @@ export default function Page() {
     if (error) {
         return (
             <AdminLayout>
-                <AccessDenied message={error} />
+                <ApiErrorView error={error} onRetry={() => location.reload()} />
             </AdminLayout>
         );
     }
@@ -156,11 +196,83 @@ export default function Page() {
             </div>
             <div className="flex gap-2">
             {perms?.update?.personnes && (
-                <Button variant="secondary">Éditer</Button>
+                <Button variant={editing ? "secondary" : "primary"} onClick={() => { setEditErr(null); setEditing((v) => !v); }}>
+                    {editing ? "Fermer" : (<><Icon name="document" className="w-4 h-4" />Éditer</>)}
+                </Button>
             )}
-            <Button variant="secondary">Historique</Button>
             </div>
         </div>
+
+        {/* Inline edit panel */}
+        {editing && perms?.update?.personnes && (
+            <Card className="p-6">
+            <SectionTitle icon={<Icon name="document" className="w-4 h-4" />}>
+                Modifier la fiche
+            </SectionTitle>
+            {editErr && (
+                <div className="mb-4 p-3.5 rounded-lg bg-red-500/[0.08] border border-red-500/30 flex items-start gap-2.5">
+                <Icon name="alertTriangle" className="w-4 h-4 mt-0.5 shrink-0 text-red-400" />
+                <p className="text-red-300 text-sm">{editErr}</p>
+                </div>
+            )}
+            <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Prénom</label>
+                <Input name="prenom" defaultValue={person.prenom} required />
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Nom</label>
+                <Input name="nom" defaultValue={person.nom} required />
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Date de naissance</label>
+                <Input type="date" name="date_naissance" defaultValue={person.date_naissance ? person.date_naissance.slice(0, 10) : ""} />
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Lieu de naissance</label>
+                <Input name="lieu_naissance" defaultValue={person.lieu_naissance ?? ""} />
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Sexe</label>
+                <Select name="sexe" defaultValue={person.sexe ?? ""}>
+                    <option value="">Non spécifié</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                    <option value="I">Indéterminé</option>
+                </Select>
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Nationalité</label>
+                <Input name="nationalite" defaultValue={person.nationalite ?? ""} />
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Statut</label>
+                <Select name="statut" defaultValue={person.statut}>
+                    <option value="actif">Actif</option>
+                    <option value="archive">Archivé</option>
+                    <option value="en_cours_verification">En vérification</option>
+                    <option value="supprime">Supprimé</option>
+                </Select>
+                </div>
+                <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Classification</label>
+                <Select name="niveau_classification_id" defaultValue={person.niveau_classification_id}>
+                    {classifications.map((c) => (
+                    <option key={c.id} value={c.id}>{c.code} — {c.libelle}</option>
+                    ))}
+                </Select>
+                </div>
+                <div className="md:col-span-2 flex gap-3 pt-2">
+                <Button type="submit" variant="primary" disabled={saving}>
+                    {saving ? "Enregistrement…" : "Enregistrer"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                    Annuler
+                </Button>
+                </div>
+            </form>
+            </Card>
+        )}
 
         {/* Main Info */}
         <Card className="p-6">
@@ -201,7 +313,7 @@ export default function Page() {
             <div>
                 <p className="text-sm text-zinc-400 mb-1.5">Classification</p>
                 <ClassificationTag
-                code={["NC", "CD", "SD", "TSD"][person.niveau_classification_id] || "NC"}
+                code={classifications.find((c) => c.id === person.niveau_classification_id)?.code ?? "—"}
                 />
             </div>
             </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryOne } from "@/lib/db";
+import { getSessionContext } from "@/lib/session";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Agent } from "@/types";
 
@@ -13,13 +14,14 @@ export async function GET(
 ) {
   try {
     const agent = await queryOne<Agent>(
-      `SELECT 
+      `SELECT
         id, matricule, nom, prenom, email, role_id, service_id,
         habilitation_niveau_id, actif, tentatives_echouees, verrouille,
         date_creation, date_modification
       FROM agents
       WHERE id = $1`,
-      [(await params).id]
+      [(await params).id],
+      getSessionContext(request)
     );
 
     if (!agent) {
@@ -44,13 +46,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = getSessionContext(request);
     const body = await request.json();
     const { role_id, service_id, habilitation_niveau_id, actif } = body;
 
     // Check if agent exists
     const existing = await queryOne(
       `SELECT id FROM agents WHERE id = $1`,
-      [(await params).id]
+      [(await params).id],
+      session
     );
 
     if (!existing) {
@@ -72,7 +76,8 @@ export async function PUT(
        RETURNING id, matricule, nom, prenom, email, role_id, service_id,
                  habilitation_niveau_id, actif, tentatives_echouees, verrouille,
                  date_creation, date_modification`,
-      [role_id, service_id, habilitation_niveau_id, actif, (await params).id]
+      [role_id, service_id, habilitation_niveau_id, actif, (await params).id],
+      session
     );
 
     return NextResponse.json(updated, { status: 200 });
@@ -90,18 +95,20 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = getSessionContext(request);
     const body = await request.json();
     const { action } = body;
 
     if (action === "unlock") {
       const updated = await queryOne<Agent>(
-        `UPDATE agents 
+        `UPDATE agents
          SET verrouille = false, tentatives_echouees = 0, date_modification = NOW()
          WHERE id = $1
          RETURNING id, matricule, nom, prenom, email, role_id, service_id,
                    habilitation_niveau_id, actif, tentatives_echouees, verrouille,
                    date_creation, date_modification`,
-        [(await params).id]
+        [(await params).id],
+        session
       );
 
       return NextResponse.json(updated, { status: 200 });
@@ -126,13 +133,14 @@ export async function DELETE(
 ) {
   try {
     const deleted = await queryOne<Agent>(
-      `UPDATE agents 
+      `UPDATE agents
        SET actif = false, date_modification = NOW()
        WHERE id = $1
        RETURNING id, matricule, nom, prenom, email, role_id, service_id,
                  habilitation_niveau_id, actif, tentatives_echouees, verrouille,
                  date_creation, date_modification`,
-      [(await params).id]
+      [(await params).id],
+      getSessionContext(request)
     );
 
     if (!deleted) {

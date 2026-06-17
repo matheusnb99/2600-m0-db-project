@@ -169,6 +169,12 @@ const PATHS: Record<string, React.ReactNode> = {
   ),
   filter: <path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z" />,
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
+  refresh: (
+    <>
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 4v5h-5" />
+    </>
+  ),
   vault: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />
