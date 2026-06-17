@@ -30,7 +30,7 @@ export async function POST(
     const created = await queryOne(
       `INSERT INTO scelles
         (affaire_id, description, date_saisie, lieu_stockage, statut, numero_scelle, saisi_par_agent_id, date_creation)
-       VALUES ($1, $2, $3, $4, COALESCE($5, 'conserve'), $6, $7, NOW())
+       VALUES ($1, $2, $3, $4, COALESCE($5, 'conserve')::statut_scelle, $6, $7, NOW())
        RETURNING id, numero_scelle, description, statut, lieu_stockage, date_saisie`,
       [
         affaireId,
