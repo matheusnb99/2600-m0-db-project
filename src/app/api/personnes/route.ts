@@ -72,8 +72,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate TAJ number
-    const tajNumber = `TAJ-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    // Generate TAJ number. Must fit numero_taj VARCHAR(20): base36-encode the
+    // timestamp so it stays short — e.g. "TAJ-LXR4K2P-9F3A" (~17 chars).
+    const tajNumber = `TAJ-${Date.now().toString(36).toUpperCase()}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
 
     const newPerson = await queryOne(
       `INSERT INTO personnes (

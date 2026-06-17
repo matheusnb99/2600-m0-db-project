@@ -72,6 +72,15 @@ export function pgErrorResponse(
           { status: 403 }
         );
 
+      case "22001": // string_data_right_truncation
+        return NextResponse.json(
+          {
+            message: "Une valeur dépasse la longueur maximale autorisée.",
+            code: error.code,
+          },
+          { status: 400 }
+        );
+
       case "22023": // invalid_parameter_value
         return NextResponse.json(
           { message: raw || "Paramètre invalide.", code: error.code },

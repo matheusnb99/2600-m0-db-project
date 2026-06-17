@@ -7,18 +7,31 @@ import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
+import { useAuth } from "@/context/AuthContext";
 
 interface ClassificationOption {
   id: number;
   code: string;
   libelle: string;
+  niveau: number;
+}
+
+/** Current Bell-LaPadula working level from the `taj_level` cookie, if any. */
+function workingLevelFromCookie(): number | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(/(?:^|; )taj_level=(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
 }
 
 export default function CreatePersonnePage() {
   const router = useRouter();
+  const { agent } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [classifications, setClassifications] = useState<ClassificationOption[]>([]);
+  // Default classification = current working level (the write policy requires the
+  // row's level to equal the session level).
+  const [classifId, setClassifId] = useState<string>("");
   // The list page already hides the "Nouvelle personne" link for roles without
   // INSERT, but the form is also reachable by direct URL — guard it here too so
   // a magistrat / analyste (SELECT only) can't open a form the DB would reject.
@@ -27,9 +40,15 @@ export default function CreatePersonnePage() {
   useEffect(() => {
     apiClient
       .fetchClassifications()
-      .then((data) => setClassifications(data as ClassificationOption[]))
+      .then((data) => {
+        const cls = data as ClassificationOption[];
+        setClassifications(cls);
+        const lvl = workingLevelFromCookie() ?? agent?.habilitation_niveau ?? null;
+        const match = lvl != null ? cls.find((c) => c.niveau === lvl) : undefined;
+        if (match) setClassifId(String(match.id));
+      })
       .catch(() => setClassifications([]));
-  }, []);
+  }, [agent]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -179,6 +198,8 @@ export default function CreatePersonnePage() {
                 <Select
                   name="niveau_classification_id"
                   required
+                  value={classifId}
+                  onChange={(e) => setClassifId(e.target.value)}
                 >
                   <option value="">Sélectionner une classification</option>
                   {classifications.map((c) => (
