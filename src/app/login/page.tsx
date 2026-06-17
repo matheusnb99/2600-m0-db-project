@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button, Input } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { isAuthService, centralLoginUrl, roleServiceUrl } from "@/lib/auth-url";
 import { roleById } from "@/lib/roles";
 
@@ -42,33 +43,39 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-zinc-900 dark:to-zinc-800 px-4">
-      <div className="w-full max-w-md">
+    <div className="app-bg min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md vault-fade-up">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">
-            TAJ
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-[0_16px_40px_-12px_rgba(56,189,248,0.7)] mb-5">
+            <Icon name="vault" className="w-8 h-8" strokeWidth={1.8} />
+          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">TAJ</h1>
+          <p className="mt-1 text-sm text-zinc-400">
             Traitement des Antécédents Judiciaires
+          </p>
+          <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.3em] text-sky-400/70">
+            Opération Blackvault
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl p-8 border border-zinc-200 dark:border-zinc-700">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-6">
-            Connexion
+        <div className="vault-sheen rounded-2xl border border-white/[0.08] p-8 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)]">
+          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+            <Icon name="lock" className="w-4 h-4 text-sky-300" />
+            Connexion sécurisée
           </h2>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-700 dark:text-red-200 text-sm">{error}</p>
+            <div className="mb-6 p-3.5 rounded-lg bg-red-500/[0.08] border border-red-500/30 flex items-start gap-2.5">
+              <Icon name="alertTriangle" className="w-4 h-4 mt-0.5 shrink-0 text-red-400" />
+              <p className="text-red-300 text-sm">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Email
               </label>
               <Input
@@ -83,7 +90,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Mot de passe
               </label>
               <Input
@@ -100,24 +107,26 @@ export default function LoginPage() {
             <Button
               type="submit"
               variant="primary"
-              className="w-full"
+              size="lg"
+              className="w-full mt-2"
               disabled={isLoading}
             >
-              {isLoading ? "Connexion en cours..." : "Se connecter"}
+              {isLoading ? "Connexion en cours…" : "Se connecter"}
             </Button>
           </form>
 
           {/* Footer */}
-          <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+          <div className="mt-6 pt-5 border-t border-white/[0.07]">
+            <p className="text-xs text-zinc-500 text-center">
               Pour accéder au système TAJ, vous devez être un agent autorisé.
             </p>
           </div>
         </div>
 
         {/* Demo info */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="mt-6 flex items-center justify-center gap-2 text-center">
+          <Icon name="shieldCheck" className="w-3.5 h-3.5 text-zinc-600" />
+          <p className="text-xs text-zinc-500">
             Système sécurisé — Accès réservé aux autorités
           </p>
         </div>

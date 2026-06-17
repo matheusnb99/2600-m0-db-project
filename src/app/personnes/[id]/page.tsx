@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Card, Badge, Button, Spinner, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Spinner, AccessDenied, ClassificationTag, SectionTitle } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -118,9 +119,10 @@ export default function Page() {
     if (!data || !data.person) {
         return (
             <AdminLayout>
-                <Card className="p-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-                <p className="text-red-700 dark:text-red-200">{"Personne introuvable"}</p>
-                </Card>
+                <div className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-6 flex items-center gap-3">
+                    <Icon name="alertTriangle" className="w-5 h-5 text-red-400" />
+                    <p className="text-red-200">Personne introuvable</p>
+                </div>
             </AdminLayout>
         );
     }
@@ -138,14 +140,19 @@ export default function Page() {
     <AdminLayout>
         <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white text-xl font-bold ring-2 ring-white/10">
+                {person.prenom[0]}
+            </div>
             <div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-white">
                 {person.prenom} {person.nom}
             </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-sm font-mono text-sky-300/80 mt-0.5">
                 {person.numero_taj}
             </p>
+            </div>
             </div>
             <div className="flex gap-2">
             {perms?.update?.personnes && (
@@ -157,9 +164,9 @@ export default function Page() {
 
         {/* Main Info */}
         <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+            <SectionTitle icon={<Icon name="user" className="w-4 h-4" />}>
             Informations
-            </h3>
+            </SectionTitle>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Statut</p>
@@ -192,23 +199,27 @@ export default function Page() {
                 </p>
             </div>
             <div>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Classification</p>
-                <Badge variant="default">
-                {["NC", "CD", "SD", "TSD"][person.niveau_classification_id] || "—"}
-                </Badge>
+                <p className="text-sm text-zinc-400 mb-1.5">Classification</p>
+                <ClassificationTag
+                code={["NC", "CD", "SD", "TSD"][person.niveau_classification_id] || "NC"}
+                />
             </div>
             </div>
         </Card>
 
         {/* Alerts */}
         {alerts.length > 0 && (
-            <Card className="p-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-            <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-4">
-                🚨 Signalements actifs ({alerts.length})
+            <Card className="p-6 border-red-500/30! bg-red-500/[0.05]!">
+            <h3 className="flex items-center gap-2.5 text-base font-semibold text-red-300 mb-4">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25">
+                    <Icon name="siren" className="w-4 h-4" />
+                </span>
+                Signalements actifs
+                <span className="text-xs font-normal text-red-400/70">({alerts.length})</span>
             </h3>
             <div className="space-y-2">
                 {alerts.map((alert) => (
-                <div key={alert.id} className="p-3 bg-white dark:bg-zinc-800 rounded border border-red-200 dark:border-red-800">
+                <div key={alert.id} className="p-3 bg-black/20 rounded-lg border border-red-500/20">
                     <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <p className="font-medium text-zinc-900 dark:text-white">
@@ -230,9 +241,9 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Addresses */}
             <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                📍 Adresses ({addresses.length})
-            </h3>
+            <SectionTitle icon={<Icon name="mapPin" className="w-4 h-4" />} count={addresses.length}>
+                Adresses
+            </SectionTitle>
             {addresses.length === 0 ? (
                 <p className="text-sm text-zinc-500">Aucune adresse</p>
             ) : (
@@ -263,9 +274,9 @@ export default function Page() {
 
             {/* Phones */}
             <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                📞 Téléphones ({phones.length})
-            </h3>
+            <SectionTitle icon={<Icon name="phone" className="w-4 h-4" />} count={phones.length}>
+                Téléphones
+            </SectionTitle>
             {phones.length === 0 ? (
                 <p className="text-sm text-zinc-500">Aucun téléphone</p>
             ) : (
@@ -297,9 +308,9 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Aliases */}
             <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                🏷️ Alias ({aliases.length})
-            </h3>
+            <SectionTitle icon={<Icon name="tag" className="w-4 h-4" />} count={aliases.length}>
+                Alias
+            </SectionTitle>
             {aliases.length === 0 ? (
                 <p className="text-sm text-zinc-500">Aucun alias</p>
             ) : (
@@ -315,9 +326,12 @@ export default function Page() {
 
             {/* Biometrics */}
             <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                🔐 Données biométriques ({biometrics.reduce((sum, b) => sum + parseInt(b.count), 0)})
-            </h3>
+            <SectionTitle
+                icon={<Icon name="fingerprint" className="w-4 h-4" />}
+                count={biometrics.reduce((sum, b) => sum + parseInt(b.count), 0)}
+            >
+                Données biométriques
+            </SectionTitle>
             {biometrics.length === 0 ? (
                 <p className="text-sm text-zinc-500">Aucune donnée biométrique</p>
             ) : (
@@ -335,9 +349,9 @@ export default function Page() {
         {/* Cases */}
         {cases.length > 0 && (
             <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                📋 Affaires impliquées ({cases.length})
-            </h3>
+            <SectionTitle icon={<Icon name="folder" className="w-4 h-4" />} count={cases.length}>
+                Affaires impliquées
+            </SectionTitle>
             <div className="space-y-2">
                 {cases.map((c) => (
                 <div key={c.affaire_id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">

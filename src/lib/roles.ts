@@ -46,25 +46,26 @@ export function roleByName(nom: string | undefined | null): RoleInfo | undefined
 export interface NavItem {
   href: string;
   label: string;
+  /** Icon key resolved against the SVG set in components/icons.tsx. */
   icon: string;
   /** Role names allowed here. Omit = every authenticated role. */
   roles?: string[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Tableau de bord", icon: "📊" },
+  { href: "/dashboard", label: "Tableau de bord", icon: "dashboard" },
   // Données métier : rôles avec GRANT sur personnes/affaires/signalements.
-  { href: "/personnes", label: "Personnes", icon: "🧑", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
-  { href: "/affaires", label: "Affaires", icon: "📂", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
-  { href: "/signalements", label: "Signalements", icon: "🚨", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
+  { href: "/personnes", label: "Personnes", icon: "users", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
+  { href: "/affaires", label: "Affaires", icon: "folder", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
+  { href: "/signalements", label: "Signalements", icon: "siren", roles: ["agent_saisie", "opj", "magistrat", "analyste_renseignement"] },
   // Administration : admin_systeme gère agents/services/rôles ; magistrat lit
   // les agents de son service (SELECT, filtré RLS) ; auditeur lit l'audit.
-  { href: "/admin/agents", label: "Agents", icon: "👤", roles: ["admin_systeme", "magistrat"] },
-  { href: "/admin/services", label: "Services", icon: "🏢", roles: ["admin_systeme"] },
-  { href: "/admin/roles", label: "Rôles", icon: "🔐", roles: ["admin_systeme"] },
-  { href: "/admin/audit", label: "Audit", icon: "📋", roles: ["admin_systeme", "auditeur"] },
+  { href: "/admin/agents", label: "Agents", icon: "user", roles: ["admin_systeme", "magistrat"] },
+  { href: "/admin/services", label: "Services", icon: "building", roles: ["admin_systeme"] },
+  { href: "/admin/roles", label: "Rôles", icon: "shieldKey", roles: ["admin_systeme"] },
+  { href: "/admin/audit", label: "Audit", icon: "clipboard", roles: ["admin_systeme", "auditeur"] },
   // Vues anonymisées : contrôle de conformité (jamais la donnée brute).
-  { href: "/conformite", label: "Vues anonymisées", icon: "🛡️", roles: ["auditeur", "controleur_cnil"] },
+  { href: "/conformite", label: "Vues anonymisées", icon: "shieldCheck", roles: ["auditeur", "controleur_cnil"] },
 ];
 
 /** Nav entries a role may see: unrestricted ones, plus those listing the role. */

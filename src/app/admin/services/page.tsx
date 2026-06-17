@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, Badge, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -98,10 +99,10 @@ export default function ServicesPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header with actions */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Gestion des Services
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-400">
+            Unités opérationnelles : commissariats, brigades, parquets, services de renseignement.
+          </p>
           {perms?.insert?.services && (
             <Button
               variant="primary"
@@ -110,7 +111,8 @@ export default function ServicesPage() {
                 setShowForm(true);
               }}
             >
-              ➕ Nouveau service
+              <Icon name="plus" className="w-4 h-4" />
+              Nouveau service
             </Button>
           )}
         </div>
@@ -196,53 +198,58 @@ export default function ServicesPage() {
         /* Services Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {services.map((service) => (
-            <Card key={service.id} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={service.id} className="p-6 vault-panel-hover">
               <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
-                    {service.nom}
-                  </h3>
-                  <Badge className={typeColors[service.type]}>
-                    {typeLabels[service.type]}
-                  </Badge>
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-300 ring-1 ring-inset ring-sky-500/20">
+                    <Icon name="building" className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">
+                      {service.nom}
+                    </h3>
+                    <Badge className={`mt-1 ${typeColors[service.type]}`}>
+                      {typeLabels[service.type]}
+                    </Badge>
+                  </div>
                 </div>
                 <Badge variant={service.actif ? "success" : "default"}>
                   {service.actif ? "Actif" : "Inactif"}
                 </Badge>
               </div>
 
-              <div className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                <div className="flex items-center gap-2">
-                  <span>📍</span>
+              <div className="space-y-2 text-sm text-zinc-400 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Icon name="mapPin" className="w-4 h-4 shrink-0 text-zinc-500" />
                   <span>{service.adresse}</span>
                 </div>
                 {service.telephone && (
-                  <div className="flex items-center gap-2">
-                    <span>📞</span>
+                  <div className="flex items-center gap-2.5">
+                    <Icon name="phone" className="w-4 h-4 shrink-0 text-zinc-500" />
                     <span>{service.telephone}</span>
                   </div>
                 )}
                 {service.email && (
-                  <div className="flex items-center gap-2">
-                    <span>📧</span>
+                  <div className="flex items-center gap-2.5">
+                    <Icon name="mail" className="w-4 h-4 shrink-0 text-zinc-500" />
                     <span>{service.email}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <span>🏷️</span>
-                  <span className="font-mono">{service.code_unite}</span>
+                <div className="flex items-center gap-2.5">
+                  <Icon name="tag" className="w-4 h-4 shrink-0 text-zinc-500" />
+                  <span className="font-mono text-zinc-300">{service.code_unite}</span>
                 </div>
               </div>
 
               {perms?.update?.services && (
-                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
+                <div className="pt-4 border-t border-white/[0.06] flex gap-2">
                   <button
                     onClick={() => handleToggleService(service)}
-                    className="flex-1 px-3 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded transition-colors font-medium"
+                    className="flex-1 px-3 py-2 text-sm bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 rounded-lg ring-1 ring-inset ring-white/10 transition-colors font-medium cursor-pointer"
                   >
                     {service.actif ? "Désactiver" : "Activer"}
                   </button>
-                  <button className="flex-1 px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-200 rounded transition-colors font-medium">
+                  <button className="flex-1 px-3 py-2 text-sm bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 rounded-lg ring-1 ring-inset ring-sky-500/20 transition-colors font-medium cursor-pointer">
                     Éditer
                   </button>
                 </div>

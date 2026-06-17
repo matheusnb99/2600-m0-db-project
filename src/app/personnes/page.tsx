@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -75,35 +76,45 @@ export default function PersonnesPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Personnes
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-400">
+            Fichier des personnes — accès filtré par RLS / Bell-LaPadula.
+          </p>
           {perms?.insert?.personnes && (
             <Link href="/personnes/create">
-              <Button variant="primary">➕ Nouvelle personne</Button>
+              <Button variant="primary">
+                <Icon name="plus" className="w-4 h-4" />
+                Nouvelle personne
+              </Button>
             </Link>
           )}
         </div>
 
         {/* Filters */}
-        <Card className="p-6">
+        <Card className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Recherche
               </label>
-              <Input
-                placeholder="Nom ou prénom..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(0);
-                }}
-              />
+              <div className="relative">
+                <Icon
+                  name="search"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
+                />
+                <Input
+                  className="pl-9"
+                  placeholder="Nom ou prénom..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(0);
+                  }}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Statut
               </label>
               <Select
@@ -120,8 +131,9 @@ export default function PersonnesPage() {
               </Select>
             </div>
             <div className="flex items-end">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {total} résultat{total !== 1 ? "s" : ""}
+              <span className="text-sm text-zinc-500">
+                <span className="font-semibold text-zinc-200 tabular-nums">{total}</span>{" "}
+                résultat{total !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -134,61 +146,57 @@ export default function PersonnesPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+              <thead className="bg-white/[0.02] border-b border-white/10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Identité
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Date de naissance
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    TAJ
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Actions
-                  </th>
+                  {["Identité", "Date de naissance", "TAJ", "Statut", "Actions"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-white/[0.05]">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center">
+                    <td colSpan={5} className="px-6 py-10 text-center">
                       <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                        <div className="relative h-8 w-8">
+                          <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+                          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+                        </div>
                       </div>
                     </td>
                   </tr>
                 ) : personnes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                    <td colSpan={5} className="px-6 py-10 text-center text-zinc-500">
                       Aucune personne trouvée
                     </td>
                   </tr>
                 ) : (
                   personnes.map((personne) => (
-                    <tr key={personne.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <tr key={personne.id} className="hover:bg-white/[0.03] transition-colors">
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-medium text-zinc-900 dark:text-white">
+                          <p className="font-medium text-white">
                             {personne.prenom} {personne.nom}
                           </p>
                           {personne.lieu_naissance && (
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            <p className="text-xs text-zinc-500">
                               {personne.lieu_naissance}
                             </p>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                      <td className="px-6 py-4 text-sm text-zinc-400">
                         {personne.date_naissance
                           ? new Date(personne.date_naissance).toLocaleDateString("fr-FR")
                           : "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm font-mono text-zinc-900 dark:text-zinc-100">
+                      <td className="px-6 py-4 text-sm font-mono text-sky-300">
                         {personne.numero_taj}
                       </td>
                       <td className="px-6 py-4">
@@ -201,6 +209,7 @@ export default function PersonnesPage() {
                       <td className="px-6 py-4">
                         <Link href={`/personnes/${personne.id}`}>
                           <Button size="sm" variant="secondary">
+                            <Icon name="eye" className="w-4 h-4" />
                             Voir
                           </Button>
                         </Link>

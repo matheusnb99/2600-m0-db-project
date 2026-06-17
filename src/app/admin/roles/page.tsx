@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Card, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -129,7 +130,17 @@ export default function RolesPage() {
                 setShowForm((v) => !v);
               }}
             >
-              {showForm ? "Fermer" : "➕ Nouveau rôle"}
+              {showForm ? (
+                <>
+                  <Icon name="chevronLeft" className="w-4 h-4" />
+                  Fermer
+                </>
+              ) : (
+                <>
+                  <Icon name="plus" className="w-4 h-4" />
+                  Nouveau rôle
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -309,9 +320,10 @@ export default function RolesPage() {
                     <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
                       <Link
                         href={`/admin/agents?role_id=${role.id}`}
-                        className="text-sm font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 hover:text-sky-300 transition-colors"
                       >
-                        Voir les agents de ce rôle →
+                        Voir les agents de ce rôle
+                        <Icon name="arrowRight" className="w-3.5 h-3.5" />
                       </Link>
                     </div>
                   </div>
@@ -351,7 +363,11 @@ function AccessGroup({
             className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-xs text-zinc-700 dark:text-zinc-200"
             title={a.key}
           >
-            {a.view && <span title="Vue anonymisée">🔒</span>}
+            {a.view && (
+              <span title="Vue anonymisée" className="inline-flex">
+                <Icon name="lock" className="w-3 h-3 text-zinc-400" />
+              </span>
+            )}
             {a.label}
             <span className="flex gap-0.5">
               {a.select && <Priv letter="S" />}

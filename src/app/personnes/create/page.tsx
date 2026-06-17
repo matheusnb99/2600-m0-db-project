@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Button, Input, Select, NotAuthorized } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -68,19 +69,23 @@ export default function CreatePersonnePage() {
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-            Nouvelle personne
-          </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-            Ajouter une nouvelle personne au TAJ
-          </p>
+        <div className="flex items-center gap-3.5">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-300 ring-1 ring-inset ring-sky-500/20">
+            <Icon name="user" className="w-6 h-6" />
+          </span>
+          <div>
+            <h1 className="text-xl font-bold text-white">Nouvelle personne</h1>
+            <p className="text-sm text-zinc-400 mt-0.5">
+              Ajouter une nouvelle personne au TAJ
+            </p>
+          </div>
         </div>
 
         <Card className="p-6">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-              <p className="text-red-700 dark:text-red-200">{error}</p>
+            <div className="mb-6 p-3.5 rounded-lg bg-red-500/[0.08] border border-red-500/30 flex items-start gap-2.5">
+              <Icon name="alertTriangle" className="w-4 h-4 mt-0.5 shrink-0 text-red-400" />
+              <p className="text-red-300 text-sm">{error}</p>
             </div>
           )}
 

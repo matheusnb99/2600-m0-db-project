@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, Badge, Button, Select, AccessDenied, Pagination } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -83,22 +84,25 @@ export default function SignalementsPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Signalements
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-400">
+            Fiches S, OQTF, avis de recherche et mandats actifs.
+          </p>
           {perms?.insert?.signalements && (
             <Link href="/signalements/create">
-              <Button variant="primary">🚨 Nouveau signalement</Button>
+              <Button variant="danger">
+                <Icon name="siren" className="w-4 h-4" />
+                Nouveau signalement
+              </Button>
             </Link>
           )}
         </div>
 
         {/* Filters */}
-        <Card className="p-6">
+        <Card className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Type
               </label>
               <Select
@@ -127,14 +131,17 @@ export default function SignalementsPage() {
                   }}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <span className="text-sm font-medium text-zinc-300">
                   Actifs seulement
                 </span>
               </label>
             </div>
             <div className="flex items-end justify-end">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {signalements.length} résultat{signalements.length !== 1 ? "s" : ""}
+              <span className="text-sm text-zinc-500">
+                <span className="font-semibold text-zinc-200 tabular-nums">
+                  {signalements.length}
+                </span>{" "}
+                résultat{signalements.length !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -147,7 +154,10 @@ export default function SignalementsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {loading ? (
             <div className="col-span-full flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+              <div className="relative h-10 w-10">
+                <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+              </div>
             </div>
           ) : signalements.length === 0 ? (
             <div className="col-span-full text-center py-12">
@@ -157,7 +167,7 @@ export default function SignalementsPage() {
             </div>
           ) : (
             signalements.map((sig) => (
-              <Card key={sig.id} className="p-4 hover:shadow-lg transition-shadow">
+              <Card key={sig.id} className="p-4 vault-panel-hover">
                 <div className="space-y-3">
                   {/* Priority */}
                   <div className="flex items-start justify-between">
@@ -167,7 +177,7 @@ export default function SignalementsPage() {
                       {typeLabels[sig.type] || sig.type}
                     </Badge>
                     <div className="text-right">
-                      <div className="text-xs font-bold text-red-600 dark:text-red-400">
+                      <div className="text-sm font-bold text-red-400 tabular-nums">
                         P{sig.priorite}
                       </div>
                       <div className="text-xs text-zinc-500">
@@ -177,11 +187,11 @@ export default function SignalementsPage() {
                   </div>
 
                   {/* Person */}
-                  <div className="border-t border-zinc-200 dark:border-zinc-800 pt-3">
-                    <p className="font-medium text-zinc-900 dark:text-white">
+                  <div className="border-t border-white/[0.06] pt-3">
+                    <p className="font-medium text-white">
                       {sig.prenom} {sig.nom}
                     </p>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    <p className="text-xs text-zinc-500">
                       {sig.date_naissance
                         ? new Date(sig.date_naissance).toLocaleDateString("fr-FR")
                         : ""}
@@ -190,27 +200,28 @@ export default function SignalementsPage() {
 
                   {/* Motif */}
                   <div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                    <p className="text-sm text-zinc-400 line-clamp-2">
                       {sig.motif}
                     </p>
                   </div>
 
                   {/* Dates */}
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1">
+                  <div className="text-xs text-zinc-500 space-y-1">
                     <div>
-                      Émis: {new Date(sig.date_emission).toLocaleDateString("fr-FR")}
+                      Émis : {new Date(sig.date_emission).toLocaleDateString("fr-FR")}
                     </div>
                     {sig.date_expiration && (
                       <div>
-                        Expire: {new Date(sig.date_expiration).toLocaleDateString("fr-FR")}
+                        Expire : {new Date(sig.date_expiration).toLocaleDateString("fr-FR")}
                       </div>
                     )}
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                  <div className="pt-3 border-t border-white/[0.06]">
                     <Link href={`/signalements/${sig.id}`}>
                       <Button size="sm" variant="secondary" className="w-full">
+                        <Icon name="eye" className="w-4 h-4" />
                         Voir détails
                       </Button>
                     </Link>

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Card, Badge, Button } from "@/components/ui";
+import { Card, Badge, Button, SectionTitle } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -69,7 +70,10 @@ export default function SignalementDetailPage() {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          <div className="relative h-10 w-10">
+            <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+          </div>
         </div>
       </AdminLayout>
     );
@@ -77,9 +81,10 @@ export default function SignalementDetailPage() {
   if (error || !signalement)
     return (
       <AdminLayout>
-        <Card className="p-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-          <p className="text-red-700 dark:text-red-200">{error || "Signalement not found"}</p>
-        </Card>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-6 flex items-center gap-3">
+          <Icon name="alertTriangle" className="w-5 h-5 text-red-400" />
+          <p className="text-red-200">{error || "Signalement introuvable"}</p>
+        </div>
       </AdminLayout>
     );
 
@@ -102,14 +107,19 @@ export default function SignalementDetailPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              {typeLabels[signalement.type] || signalement.type}
-            </h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-              Signalement #{signalement.id}
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-300 ring-1 ring-inset ring-red-500/20">
+              <Icon name="siren" className="w-6 h-6" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {typeLabels[signalement.type] || signalement.type}
+              </h1>
+              <p className="text-sm font-mono text-zinc-400 mt-0.5">
+                Signalement #{signalement.id}
+              </p>
+            </div>
           </div>
           {perms?.update?.signalements && (
             <div className="flex gap-2">
@@ -129,11 +139,10 @@ export default function SignalementDetailPage() {
 
         {/* Status Alert */}
         {!signalement.actif && (
-          <Card className="p-4 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800">
-            <p className="text-gray-700 dark:text-gray-300 text-sm">
-              ℹ️ Ce signalement a été désactivé
-            </p>
-          </Card>
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
+            <Icon name="info" className="w-4 h-4 text-zinc-400" />
+            <p className="text-zinc-300 text-sm">Ce signalement a été désactivé</p>
+          </div>
         )}
 
         {/* Main Info */}
@@ -165,9 +174,9 @@ export default function SignalementDetailPage() {
 
         {/* Person Info */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-            👤 Personne signalée
-          </h3>
+          <SectionTitle icon={<Icon name="user" className="w-4 h-4" />}>
+            Personne signalée
+          </SectionTitle>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-zinc-900 dark:text-white">

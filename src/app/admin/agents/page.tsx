@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Badge, Button, Input, Select, Spinner, AccessDenied } from "@/components/ui";
+import { Card, Badge, Button, Input, Select, Spinner, AccessDenied, ClassificationTag } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -106,10 +107,10 @@ export default function AgentsPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header with actions */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Gestion des Agents
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-400">
+            Comptes agents et habilitations — gérés par <code className="font-mono text-zinc-300">admin_systeme</code>.
+          </p>
           {perms?.insert?.agents && (
             <Button
               variant="primary"
@@ -118,7 +119,8 @@ export default function AgentsPage() {
                 setShowForm(true);
               }}
             >
-              ➕ Nouvel agent
+              <Icon name="plus" className="w-4 h-4" />
+              Nouvel agent
             </Button>
           )}
         </div>
@@ -221,29 +223,19 @@ export default function AgentsPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+              <thead className="bg-white/[0.02] border-b border-white/10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Agent
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Matricule
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Classification
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Actions
-                  </th>
+                  {["Agent", "Email", "Matricule", "Classification", "Statut", "Actions"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-white/[0.05]">
                 {agents.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
@@ -252,35 +244,35 @@ export default function AgentsPage() {
                   </tr>
                 ) : (
                   agents.map((agent) => (
-                  <tr key={agent.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                  <tr key={agent.id} className="hover:bg-white/[0.03] transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-600 text-white text-xs font-bold ring-1 ring-white/10">
                           {agent.prenom[0]}
                         </div>
                         <div>
-                          <p className="font-medium text-zinc-900 dark:text-white">
+                          <p className="font-medium text-white">
                             {agent.prenom} {agent.nom}
                           </p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="text-xs text-zinc-500">
                             {agent.matricule}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    <td className="px-6 py-4 text-sm text-zinc-400">
                       {agent.email}
                     </td>
-                    <td className="px-6 py-4 text-sm font-mono text-zinc-900 dark:text-zinc-100">
+                    <td className="px-6 py-4 text-sm font-mono text-zinc-200">
                       {agent.matricule}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge>
-                        {
+                      <ClassificationTag
+                        code={
                           classifications.find((c) => c.id === agent.habilitation_niveau_id)
-                            ?.code
+                            ?.code ?? "NC"
                         }
-                      </Badge>
+                      />
                     </td>
                     <td className="px-6 py-4">
                       {agent.verrouille ? (

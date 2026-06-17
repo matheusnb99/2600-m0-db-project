@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, queryOne } from "@/lib/db";
+import { getSessionContext } from "@/lib/session";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Service } from "@/types";
 
@@ -33,7 +34,9 @@ export async function GET(request: NextRequest) {
 
     sql += ` ORDER BY nom`;
 
-    const services = await query<Service>(sql, params);
+    // Open the RLS session for parity with the other data routes (services
+    // itself isn't RLS-gated, but this keeps the audit context consistent).
+    const services = await query<Service>(sql, params, getSessionContext(request));
 
     return NextResponse.json(services, { status: 200 });
   } catch (error) {
@@ -47,6 +50,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = getSessionContext(request);
     const body = await request.json();
 
     const {
@@ -69,7 +73,8 @@ export async function POST(request: NextRequest) {
     // Check if code_unite already exists
     const existing = await queryOne(
       `SELECT id FROM services WHERE code_unite = $1`,
-      [code_unite]
+      [code_unite],
+      session
     );
 
     if (existing) {
@@ -84,7 +89,8 @@ export async function POST(request: NextRequest) {
       `INSERT INTO services (nom, type, code_unite, adresse, telephone, email, actif, date_creation)
        VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
        RETURNING id, nom, type, adresse, code_unite, telephone, email, actif, date_creation`,
-      [nom, type, code_unite, adresse, telephone, email]
+      [nom, type, code_unite, adresse, telephone, email],
+      session
     );
 
     return NextResponse.json(newService, { status: 201 });

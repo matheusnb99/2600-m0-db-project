@@ -14,6 +14,7 @@ import {
 } from "@/lib/roles";
 import { Forbidden } from "@/components/Forbidden";
 import { NotAuthorized } from "@/components/ui";
+import { Icon, type IconName } from "@/components/icons";
 
 /** Map a Bell-LaPadula level (0..3) to its classification code. */
 const NIVEAU_LABELS: Record<string, string> = {
@@ -67,8 +68,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   // redirect.
   if (isLoading || !whoamiReady || !agent) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="app-bg flex h-screen items-center justify-center">
+        <div className="relative h-10 w-10">
+          <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+        </div>
       </div>
     );
   }
@@ -94,56 +98,80 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const navItems = navItemsForRole(agentRole?.nom);
   const allowedHere = canAccessPath(agentRole?.nom, pathname);
 
+  const currentNav = NAV_ITEMS.find((i) => isActive(i.href));
+
   return (
-    <div className="flex h-screen bg-zinc-50 dark:bg-black">
+    <div className="app-bg flex h-screen text-zinc-100">
       {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-20"
-        } bg-zinc-900 dark:bg-zinc-950 text-white transition-all duration-300 flex flex-col border-r border-zinc-800`}
+        } shrink-0 bg-[#0a0d13]/80 backdrop-blur-xl text-white transition-all duration-300 flex flex-col border-r border-white/[0.06]`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-zinc-800">
+        <div className="h-[73px] px-5 flex items-center border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold">
-              T
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-[0_8px_24px_-8px_rgba(56,189,248,0.7)]">
+              <Icon name="vault" className="w-5 h-5" strokeWidth={2} />
             </div>
             {sidebarOpen && (
-              <div>
-                <div className="font-bold text-sm">TAJ</div>
-                <div className="text-xs text-zinc-400">Blackvault</div>
+              <div className="leading-tight">
+                <div className="font-bold text-sm tracking-wide">TAJ</div>
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-sky-400/80">
+                  Blackvault
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                isActive(item.href)
-                  ? "bg-blue-600 text-white"
-                  : "text-zinc-300 hover:bg-zinc-800"
-              }`}
-              title={item.label}
-            >
-              <span className="text-lg">{item.icon}</span>
-              {sidebarOpen && <span className="text-sm">{item.label}</span>}
-            </Link>
-          ))}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {sidebarOpen && (
+            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+              Navigation
+            </p>
+          )}
+          {navItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                  active
+                    ? "bg-sky-500/10 text-white ring-1 ring-inset ring-sky-500/25"
+                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
+                } ${sidebarOpen ? "" : "justify-center"}`}
+                title={item.label}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-sky-400" />
+                )}
+                <Icon
+                  name={item.icon as IconName}
+                  className={`w-5 h-5 shrink-0 ${
+                    active ? "text-sky-300" : "text-zinc-500 group-hover:text-zinc-300"
+                  }`}
+                />
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Toggle button */}
-        <div className="border-t border-zinc-800 p-4">
+        <div className="border-t border-white/[0.06] p-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
-            title="Toggle sidebar"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200 rounded-lg transition-colors cursor-pointer"
+            title={sidebarOpen ? "Réduire le menu" : "Étendre le menu"}
           >
-            <span className="text-lg">{sidebarOpen ? "◀" : "▶"}</span>
+            <Icon
+              name="chevronsLeft"
+              className={`w-4 h-4 transition-transform ${sidebarOpen ? "" : "rotate-180"}`}
+            />
+            {sidebarOpen && <span className="text-xs">Réduire</span>}
           </button>
         </div>
       </aside>
@@ -151,59 +179,69 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-              {NAV_ITEMS.find((i) => isActive(i.href))?.label || "Dashboard"}
+        <header className="shrink-0 h-[73px] bg-[#0a0d13]/70 backdrop-blur-xl border-b border-white/[0.06] px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {currentNav && (
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-300 ring-1 ring-inset ring-sky-500/20">
+                <Icon name={currentNav.icon as IconName} className="w-5 h-5" />
+              </span>
+            )}
+            <h1 className="text-xl font-semibold text-white">
+              {currentNav?.label || "Tableau de bord"}
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Identité de connexion BDD (rôle taj_* basculable pour la démo) */}
             {whoami?.db_role && (
               <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10"
                 title="Rôle PostgreSQL de connexion (DATA pool) — change avec la chaîne de connexion .env"
               >
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                  BDD&nbsp;:
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                  BDD
                 </span>
-                <span className="text-xs font-mono font-semibold text-zinc-900 dark:text-white">
+                <span className="text-xs font-mono font-semibold text-zinc-100">
                   {whoami.db_role}
                 </span>
                 {niveauLabel && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 ring-1 ring-inset ring-sky-500/30">
                     {niveauLabel}
                   </span>
                 )}
               </div>
             )}
             {agent && (
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-white">
+              <div className="flex items-center gap-3 pl-1">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-white leading-tight">
                     {agent.prenom} {agent.nom}
                   </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs font-mono text-zinc-500">
                     {agent.matricule}
                   </p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-600 text-white text-sm font-bold ring-2 ring-white/10">
                   {agent.prenom[0]}
                 </div>
               </div>
             )}
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/[0.05] rounded-lg transition-colors cursor-pointer"
+              title="Déconnexion"
             >
-              Déconnexion
+              <Icon name="logout" className="w-4 h-4" />
+              <span className="hidden md:inline">Déconnexion</span>
             </button>
           </div>
         </header>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto p-8">
-          {allowedHere ? children : <NotAuthorized roleLabel={agentRole?.label} />}
+          <div className="mx-auto max-w-7xl vault-fade-up">
+            {allowedHere ? children : <NotAuthorized roleLabel={agentRole?.label} />}
+          </div>
         </main>
       </div>
     </div>

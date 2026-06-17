@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Select, AccessDenied, Pagination } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -70,35 +71,45 @@ export default function AffairesPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Affaires
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-400">
+            Procédures judiciaires enregistrées au TAJ.
+          </p>
           {perms?.insert?.affaires && (
             <Link href="/affaires/create">
-              <Button variant="primary">➕ Nouvelle affaire</Button>
+              <Button variant="primary">
+                <Icon name="plus" className="w-4 h-4" />
+                Nouvelle affaire
+              </Button>
             </Link>
           )}
         </div>
 
         {/* Filters */}
-        <Card className="p-6">
+        <Card className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Recherche
               </label>
-              <Input
-                placeholder="Numéro PV, lieu, description..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(0);
-                }}
-              />
+              <div className="relative">
+                <Icon
+                  name="search"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
+                />
+                <Input
+                  className="pl-9"
+                  placeholder="Numéro PV, lieu, description..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(0);
+                  }}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Statut
               </label>
               <Select
@@ -115,8 +126,9 @@ export default function AffairesPage() {
               </Select>
             </div>
             <div className="flex items-end">
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {total} résultat{total !== 1 ? "s" : ""}
+              <span className="text-sm text-zinc-500">
+                <span className="font-semibold text-zinc-200 tabular-nums">{total}</span>{" "}
+                résultat{total !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -129,52 +141,48 @@ export default function AffairesPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+              <thead className="bg-white/[0.02] border-b border-white/10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Numéro PV
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Lieu
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Ouverture
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Actions
-                  </th>
+                  {["Numéro PV", "Lieu", "Ouverture", "Statut", "Actions"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-white/[0.05]">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center">
+                    <td colSpan={5} className="px-6 py-10 text-center">
                       <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                        <div className="relative h-8 w-8">
+                          <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+                          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+                        </div>
                       </div>
                     </td>
                   </tr>
                 ) : affaires.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                    <td colSpan={5} className="px-6 py-10 text-center text-zinc-500">
                       Aucune affaire trouvée
                     </td>
                   </tr>
                 ) : (
                   affaires.map((affaire) => (
-                    <tr key={affaire.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <tr key={affaire.id} className="hover:bg-white/[0.03] transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-medium text-zinc-900 dark:text-white">
+                        <p className="font-medium font-mono text-sky-300">
                           {affaire.numero_pv}
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                      <td className="px-6 py-4 text-sm text-zinc-400">
                         {affaire.lieu_faits || "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                      <td className="px-6 py-4 text-sm text-zinc-400">
                         {new Date(affaire.date_ouverture).toLocaleDateString("fr-FR")}
                       </td>
                       <td className="px-6 py-4">
@@ -187,6 +195,7 @@ export default function AffairesPage() {
                       <td className="px-6 py-4">
                         <Link href={`/affaires/${affaire.id}`}>
                           <Button size="sm" variant="secondary">
+                            <Icon name="eye" className="w-4 h-4" />
                             Voir
                           </Button>
                         </Link>

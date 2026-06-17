@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, Badge, Button, Input, Select, Spinner, AccessDenied, Pagination } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import type { AuditLog } from "@/types";
@@ -166,50 +167,49 @@ export default function AuditPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Journal d&apos;audit centralisé
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-400">
+            Traçabilité immuable des accès (<code className="font-mono text-zinc-300">audit_log</code> — REVOKE UPDATE/DELETE).
+          </p>
           <Button
             variant="primary"
             onClick={handleExport}
             disabled={exporting || loading}
           >
-            {exporting ? "Export…" : "📥 Exporter logs"}
+            <Icon name="download" className="w-4 h-4" />
+            {exporting ? "Export…" : "Exporter logs"}
           </Button>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+          <Card className="p-5">
+            <div className="flex items-center gap-2 text-sm text-zinc-400 mb-2">
+              <Icon name="clipboard" className="w-4 h-4 text-zinc-500" />
               Total d&apos;entrées
-            </p>
-            <p className="text-3xl font-bold text-zinc-900 dark:text-white">
-              {total}
-            </p>
+            </div>
+            <p className="text-3xl font-bold tabular-nums text-white">{total}</p>
           </Card>
-          <Card className="p-6 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10">
-            <p className="text-sm text-amber-700 dark:text-amber-300 mb-2 font-medium">
-              ⚠️ Alertes
-            </p>
-            <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
-              {alertCount}
-            </p>
+          <Card className="p-5 border-amber-500/30! bg-amber-500/[0.05]!">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-300 mb-2">
+              <Icon name="alertTriangle" className="w-4 h-4" />
+              Alertes
+            </div>
+            <p className="text-3xl font-bold tabular-nums text-amber-300">{alertCount}</p>
           </Card>
-          <Card className="p-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-            <p className="text-sm text-red-700 dark:text-red-300 mb-2 font-medium">
-              🚨 Critiques
-            </p>
-            <p className="text-3xl font-bold text-red-700 dark:text-red-300">
-              {criticalCount}
-            </p>
+          <Card className="p-5 border-red-500/30! bg-red-500/[0.05]!">
+            <div className="flex items-center gap-2 text-sm font-medium text-red-300 mb-2">
+              <Icon name="siren" className="w-4 h-4" />
+              Critiques
+            </div>
+            <p className="text-3xl font-bold tabular-nums text-red-300">{criticalCount}</p>
           </Card>
         </div>
 
         {/* Filters */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+          <h3 className="flex items-center gap-2 text-base font-semibold text-white mb-4">
+            <Icon name="filter" className="w-4 h-4 text-sky-300" />
             Filtres
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -289,48 +289,38 @@ export default function AuditPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+              <thead className="bg-white/[0.02] border-b border-white/10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Date/Heure
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Agent
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Action
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Table
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Sévérité
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-900 dark:text-white">
-                    Détails
-                  </th>
+                  {["Date/Heure", "Agent", "Action", "Table", "Sévérité", "Détails"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-white/[0.05]">
                 {filteredLogs.map((log) => (
                   <tr
                     key={log.id}
                     className={`${
                       log.alerte
-                        ? "bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20"
-                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                        ? "bg-red-500/[0.06] hover:bg-red-500/[0.1]"
+                        : "hover:bg-white/[0.03]"
                     } transition-colors`}
                   >
-                    <td className="px-6 py-4 text-sm font-mono text-zinc-900 dark:text-zinc-100">
+                    <td className="px-6 py-4 text-sm font-mono text-zinc-200">
                       {log.horodatage}
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    <td className="px-6 py-4 text-sm font-mono text-zinc-400">
                       {log.agent_id || "—"}
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant="default">{log.action}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    <td className="px-6 py-4 text-sm font-mono font-medium text-zinc-200">
                       {log.table_cible || "—"}
                     </td>
                     <td className="px-6 py-4">
@@ -338,21 +328,19 @@ export default function AuditPage() {
                         {severityLabels[log.severite as keyof typeof severityLabels]}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    <td className="px-6 py-4 text-sm text-zinc-400">
                       {log.alerte ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-red-600 dark:text-red-400 font-medium">
-                            🚨
-                          </span>
+                        <div className="flex items-center gap-2 text-red-300">
+                          <Icon name="alertTriangle" className="w-4 h-4 shrink-0" />
                           <span>{log.type_alerte || "Alerte"}</span>
                         </div>
                       ) : (
                         log.details && (
                           <details className="cursor-pointer">
-                            <summary className="text-blue-600 dark:text-blue-400 hover:underline">
+                            <summary className="text-sky-400 hover:text-sky-300">
                               Voir
                             </summary>
-                            <pre className="mt-2 p-2 bg-zinc-100 dark:bg-zinc-900 rounded text-xs overflow-auto">
+                            <pre className="mt-2 p-2 bg-black/40 rounded-lg text-xs overflow-auto ring-1 ring-inset ring-white/10">
                               {JSON.stringify(log.details, null, 2)}
                             </pre>
                           </details>

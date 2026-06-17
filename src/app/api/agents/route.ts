@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, queryOne } from "@/lib/db";
+import { getSessionContext } from "@/lib/session";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Agent } from "@/types";
 
@@ -42,7 +43,10 @@ export async function GET(request: NextRequest) {
 
     sql += ` ORDER BY a.nom, a.prenom`;
 
-    const agents = await query<Agent>(sql, params);
+    // Pass the RLS session so the agents policy (08) can resolve the magistrat
+    // "own service" branch — it reads app.agent_id via fn_session_agent_id().
+    // Without it, fn_session_agent_id() is NULL and magistrat sees no rows.
+    const agents = await query<Agent>(sql, params, getSessionContext(request));
 
     return NextResponse.json(agents, { status: 200 });
   } catch (error) {
@@ -56,6 +60,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = getSessionContext(request);
     const body = await request.json();
 
     const {
@@ -87,7 +92,8 @@ export async function POST(request: NextRequest) {
     // Check if matricule already exists
     const existing = await queryOne(
       `SELECT id FROM agents WHERE matricule = $1`,
-      [matricule]
+      [matricule],
+      session
     );
 
     if (existing) {
@@ -119,7 +125,8 @@ export async function POST(request: NextRequest) {
         service_id,
         habilitation_niveau_id,
         defaultPassword,
-      ]
+      ],
+      session
     );
 
     return NextResponse.json(newAgent, { status: 201 });

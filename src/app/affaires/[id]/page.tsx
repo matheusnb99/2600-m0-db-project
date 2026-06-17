@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Card, Badge, Button } from "@/components/ui";
+import { Card, Badge, Button, SectionTitle } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
@@ -80,7 +81,10 @@ export default function AffaireDetailPage() {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          <div className="relative h-10 w-10">
+            <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+          </div>
         </div>
       </AdminLayout>
     );
@@ -88,9 +92,10 @@ export default function AffaireDetailPage() {
   if (error || !data)
     return (
       <AdminLayout>
-        <Card className="p-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-          <p className="text-red-700 dark:text-red-200">{error || "Affaire not found"}</p>
-        </Card>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-6 flex items-center gap-3">
+          <Icon name="alertTriangle" className="w-5 h-5 text-red-400" />
+          <p className="text-red-200">{error || "Affaire introuvable"}</p>
+        </div>
       </AdminLayout>
     );
 
@@ -114,14 +119,19 @@ export default function AffaireDetailPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              {affaire.numero_pv}
-            </h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-              Ouvert le {new Date(affaire.date_ouverture).toLocaleDateString("fr-FR")}
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
+              <Icon name="folder" className="w-6 h-6" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold font-mono text-white">
+                {affaire.numero_pv}
+              </h1>
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Ouvert le {new Date(affaire.date_ouverture).toLocaleDateString("fr-FR")}
+              </p>
+            </div>
           </div>
           {perms?.update?.affaires && (
             <Button variant="secondary">Éditer</Button>
@@ -161,9 +171,9 @@ export default function AffaireDetailPage() {
         {/* People Involved */}
         {people.length > 0 && (
           <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-              👥 Personnes impliquées ({people.length})
-            </h3>
+            <SectionTitle icon={<Icon name="users" className="w-4 h-4" />} count={people.length}>
+              Personnes impliquées
+            </SectionTitle>
             <div className="space-y-3">
               {people.map((person) => (
                 <div key={person.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded flex items-start justify-between">
@@ -185,9 +195,9 @@ export default function AffaireDetailPage() {
         {/* Infractions */}
         {infractions.length > 0 && (
           <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-              ⚖️ Infractions ({infractions.length})
-            </h3>
+            <SectionTitle icon={<Icon name="scale" className="w-4 h-4" />} count={infractions.length}>
+              Infractions
+            </SectionTitle>
             <div className="space-y-2">
               {infractions.map((inf) => (
                 <div key={inf.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
@@ -206,9 +216,9 @@ export default function AffaireDetailPage() {
         {/* Decisions */}
         {decisions.length > 0 && (
           <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-              📋 Décisions de justice ({decisions.length})
-            </h3>
+            <SectionTitle icon={<Icon name="document" className="w-4 h-4" />} count={decisions.length}>
+              Décisions de justice
+            </SectionTitle>
             <div className="space-y-3">
               {decisions.map((dec) => (
                 <div key={dec.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
@@ -230,9 +240,9 @@ export default function AffaireDetailPage() {
         {/* Evidence */}
         {evidence.length > 0 && (
           <Card className="p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-              🔒 Pièces à conviction ({evidence.length})
-            </h3>
+            <SectionTitle icon={<Icon name="lock" className="w-4 h-4" />} count={evidence.length}>
+              Pièces à conviction
+            </SectionTitle>
             <div className="space-y-2">
               {evidence.map((e) => (
                 <div key={e.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">

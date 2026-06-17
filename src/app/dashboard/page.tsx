@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, Badge, Spinner } from "@/components/ui";
+import { Icon, type IconName } from "@/components/icons";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import type { AuditLog } from "@/types";
@@ -11,7 +12,8 @@ import type { AuditLog } from "@/types";
 interface StatState {
   label: string;
   href: string;
-  color: string;
+  icon: IconName;
+  accent: string;
   /** null = loading, number = visible count, "denied" = RBAC/RLS refusal. */
   value: number | "denied" | null;
 }
@@ -19,38 +21,49 @@ interface StatState {
 const STAT_DEFS: {
   label: string;
   href: string;
-  color: string;
+  icon: IconName;
+  accent: string;
   fetch: () => Promise<unknown>;
 }[] = [
   {
     label: "Personnes",
     href: "/personnes",
-    color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200",
+    icon: "users",
+    accent: "text-sky-300 bg-sky-500/10 ring-sky-500/20",
     fetch: () => apiClient.fetchPersonnes({ limit: 1000 }),
   },
   {
     label: "Affaires",
     href: "/affaires",
-    color: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-200",
+    icon: "folder",
+    accent: "text-amber-300 bg-amber-500/10 ring-amber-500/20",
     fetch: () => apiClient.fetchAffaires({ limit: 1000 }),
   },
   {
     label: "Signalements",
     href: "/signalements",
-    color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200",
+    icon: "siren",
+    accent: "text-red-300 bg-red-500/10 ring-red-500/20",
     fetch: () => apiClient.fetchSignalements({ limit: 1000 }),
   },
   {
     label: "Agents",
     href: "/admin/agents",
-    color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200",
+    icon: "user",
+    accent: "text-emerald-300 bg-emerald-500/10 ring-emerald-500/20",
     fetch: () => apiClient.fetchAgents(),
   },
 ];
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatState[]>(
-    STAT_DEFS.map((d) => ({ label: d.label, href: d.href, color: d.color, value: null }))
+    STAT_DEFS.map((d) => ({
+      label: d.label,
+      href: d.href,
+      icon: d.icon,
+      accent: d.accent,
+      value: null,
+    }))
   );
   const [activity, setActivity] = useState<AuditLog[] | null>(null);
   const [activityDenied, setActivityDenied] = useState(false);
@@ -98,28 +111,42 @@ export default function DashboardPage() {
   return (
     <AdminLayout>
       <div className="space-y-8">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Les chiffres ci-dessous reflètent ce que le rôle de connexion
-          PostgreSQL courant est autorisé à voir (RBAC + Bell-LaPadula). Un
-          cadenas 🔒 signifie que la base refuse l&apos;accès pour ce rôle.
-        </p>
+        <div className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <Icon name="info" className="w-5 h-5 mt-0.5 shrink-0 text-sky-400" />
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Les chiffres ci-dessous reflètent ce que le rôle de connexion
+            PostgreSQL courant est autorisé à voir (RBAC + Bell-LaPadula). Un
+            verrou signifie que la base refuse l&apos;accès pour ce rôle.
+          </p>
+        </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
-            <Link key={stat.label} href={stat.href}>
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-                  {stat.label}
-                </p>
-                <p
-                  className={`text-3xl font-bold ${stat.color} rounded-lg py-2 px-3 text-center`}
-                >
-                  {stat.value === null
-                    ? "…"
-                    : stat.value === "denied"
-                    ? "🔒"
-                    : stat.value}
+            <Link key={stat.label} href={stat.href} className="group">
+              <Card className="p-5 vault-panel-hover h-full">
+                <div className="flex items-start justify-between">
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 ring-inset ${stat.accent}`}
+                  >
+                    <Icon name={stat.icon} className="w-5 h-5" />
+                  </span>
+                  <Icon
+                    name="arrowRight"
+                    className="w-4 h-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-400"
+                  />
+                </div>
+                <p className="mt-4 text-sm text-zinc-400">{stat.label}</p>
+                <p className="mt-1 text-3xl font-bold tabular-nums text-white">
+                  {stat.value === null ? (
+                    <span className="text-zinc-600">…</span>
+                  ) : stat.value === "denied" ? (
+                    <span className="inline-flex items-center gap-1.5 text-base font-medium text-red-300">
+                      <Icon name="lock" className="w-4 h-4" /> Refusé
+                    </span>
+                  ) : (
+                    stat.value.toLocaleString("fr-FR")
+                  )}
                 </p>
               </Card>
             </Link>
@@ -128,57 +155,67 @@ export default function DashboardPage() {
 
         {/* Recent audit activity */}
         <Card className="overflow-hidden">
-          <div className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+          <div className="border-b border-white/[0.07] px-6 py-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2.5 text-base font-semibold text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/10 text-sky-300 ring-1 ring-inset ring-sky-500/20">
+                <Icon name="clipboard" className="w-4 h-4" />
+              </span>
               Activité récente — journal d&apos;audit
             </h3>
             <Link
               href="/admin/audit"
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              className="inline-flex items-center gap-1 text-sm text-sky-400 hover:text-sky-300 transition-colors"
             >
               Tout voir
+              <Icon name="arrowRight" className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {activityLoading ? (
             <Spinner label="Chargement de l'activité…" />
           ) : activityDenied ? (
-            <div className="px-6 py-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-              🔒 Ce rôle n&apos;a pas accès au journal d&apos;audit
-              (<code>audit_log</code>). Réservé à <code>admin_systeme</code>,{" "}
-              <code>auditeur</code> et <code>controleur_cnil</code>.
+            <div className="px-6 py-10 flex flex-col items-center text-center gap-2">
+              <Icon name="lock" className="w-6 h-6 text-zinc-600" />
+              <p className="text-sm text-zinc-400 max-w-md">
+                Ce rôle n&apos;a pas accès au journal d&apos;audit
+                (<code className="font-mono text-zinc-300">audit_log</code>). Réservé à{" "}
+                <code className="font-mono text-zinc-300">admin_systeme</code>,{" "}
+                <code className="font-mono text-zinc-300">auditeur</code> et{" "}
+                <code className="font-mono text-zinc-300">controleur_cnil</code>.
+              </p>
             </div>
           ) : !activity || activity.length === 0 ? (
-            <div className="px-6 py-8 text-center text-sm text-zinc-500">
+            <div className="px-6 py-10 text-center text-sm text-zinc-500">
               Aucune entrée d&apos;audit.
             </div>
           ) : (
-            <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <div className="divide-y divide-white/[0.05]">
               {activity.map((log) => (
                 <div
                   key={log.id}
-                  className={`px-6 py-4 ${
-                    log.alerte ? "bg-red-50 dark:bg-red-900/10" : ""
+                  className={`px-6 py-3.5 transition-colors hover:bg-white/[0.02] ${
+                    log.alerte ? "bg-red-500/[0.05]" : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant={log.alerte ? "danger" : "default"}>
                         {log.action}
                       </Badge>
-                      <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                      <span className="text-sm text-zinc-400">
                         sur{" "}
-                        <span className="font-medium text-zinc-900 dark:text-white">
+                        <span className="font-medium text-zinc-100 font-mono">
                           {log.table_cible || "—"}
                         </span>
                       </span>
                       {log.alerte && (
-                        <span className="text-xs text-red-600 dark:text-red-400">
-                          🚨 {log.type_alerte || "Alerte"}
+                        <span className="inline-flex items-center gap-1 text-xs text-red-300">
+                          <Icon name="alertTriangle" className="w-3.5 h-3.5" />
+                          {log.type_alerte || "Alerte"}
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap ml-4">
+                    <span className="text-xs font-mono text-zinc-500 whitespace-nowrap">
                       {new Date(log.horodatage).toLocaleString("fr-FR")}
                     </span>
                   </div>

@@ -12,12 +12,13 @@ export default function LogoutPage() {
   }, [logout]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">
-      <div className="text-center">
-        <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-          Déconnexion en cours...
-        </p>
-        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
+    <div className="app-bg min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center text-center">
+        <div className="relative h-10 w-10 mb-5">
+          <div className="absolute inset-0 rounded-full border-2 border-sky-500/15" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" />
+        </div>
+        <p className="text-zinc-400">Déconnexion en cours…</p>
       </div>
     </div>
   );
