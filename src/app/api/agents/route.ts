@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       WHERE 1=1
     `;
 
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (service_id) {
       params.push(parseInt(service_id));

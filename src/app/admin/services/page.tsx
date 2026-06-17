@@ -29,7 +29,11 @@ export default function ServicesPage() {
   }, []);
 
   useEffect(() => {
-    loadServices();
+    // Wrap so loadServices() (which sets state) isn't called synchronously here.
+    const run = async () => {
+      await loadServices();
+    };
+    run();
   }, [loadServices]);
 
   const serviceTypes: ServiceType[] = [

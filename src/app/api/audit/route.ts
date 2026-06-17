@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       FROM audit_log
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (action) {
       params.push(action);

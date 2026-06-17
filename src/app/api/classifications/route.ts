@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { pgErrorResponse } from "@/lib/api-error";
 import type { Classification } from "@/types";
@@ -7,7 +7,7 @@ import type { Classification } from "@/types";
  * GET /api/classifications
  * List all classification levels
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const classifications = await query<Classification>(
       `SELECT id, code, libelle, niveau

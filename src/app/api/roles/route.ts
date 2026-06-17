@@ -7,7 +7,7 @@ import type { Role } from "@/types";
  * GET /api/roles
  * List all roles with their classification levels
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const roles = await query<Role>(
       `SELECT id, nom, description, niveau_max_classification_id

@@ -1,17 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import { Card, Badge, Button } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
 import { usePermissions } from "@/lib/use-permissions";
 
+interface SignalementDetail {
+  id: number;
+  personne_id: string;
+  type: string;
+  priorite: number;
+  actif: boolean;
+  prenom: string;
+  nom: string;
+  date_naissance: string | null;
+  motif: string;
+  date_emission: string;
+  date_expiration: string | null;
+  service_nom: string | null;
+  agent_nom: string | null;
+  agent_prenom: string | null;
+}
+
 export default function SignalementDetailPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [signalement, setSignalement] = useState<any>(null);
+  const [signalement, setSignalement] = useState<SignalementDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -22,7 +40,7 @@ export default function SignalementDetailPage() {
       try {
         setLoading(true);
         const data = await apiClient.fetchSignalement(id);
-        setSignalement(data);
+        setSignalement(data as SignalementDetail);
       } catch (err) {
         setError((err as ApiError).message || "Erreur de chargement");
       } finally {
@@ -39,7 +57,7 @@ export default function SignalementDetailPage() {
     setIsUpdating(true);
     try {
       const updated = await apiClient.deleteSignalement(id);
-      setSignalement(updated);
+      setSignalement(updated as SignalementDetail);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error updating signalement");
     } finally {
@@ -161,7 +179,9 @@ export default function SignalementDetailPage() {
                   : ""}
               </p>
             </div>
-            <Button variant="secondary">Voir fiche</Button>
+            <Link href={`/personnes/${signalement.personne_id}`}>
+              <Button variant="secondary">Voir fiche</Button>
+            </Link>
           </div>
         </Card>
 

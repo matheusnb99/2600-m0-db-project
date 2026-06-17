@@ -9,8 +9,19 @@ import { usePermissions } from "@/lib/use-permissions";
 
 const PAGE_SIZE = 25;
 
+interface PersonneRow {
+  id: number;
+  prenom: string;
+  nom: string;
+  lieu_naissance: string | null;
+  date_naissance: string | null;
+  numero_taj: string;
+  statut: string;
+  total_count?: number;
+}
+
 export default function PersonnesPage() {
-  const [personnes, setPersonnes] = useState<any[]>([]);
+  const [personnes, setPersonnes] = useState<PersonneRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -31,7 +42,7 @@ export default function PersonnesPage() {
           statut,
           limit: PAGE_SIZE,
           offset: page * PAGE_SIZE,
-        })) as any[];
+        })) as PersonneRow[];
         setPersonnes(data);
         setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
@@ -44,11 +55,6 @@ export default function PersonnesPage() {
     const timer = setTimeout(fetchPersonnes, 300);
     return () => clearTimeout(timer);
   }, [search, statut, page]);
-
-  // Reset to the first page whenever the filters change.
-  useEffect(() => {
-    setPage(0);
-  }, [search, statut]);
 
   const statutLabels: Record<string, string> = {
     actif: "Actif",
@@ -90,14 +96,23 @@ export default function PersonnesPage() {
               <Input
                 placeholder="Nom ou prénom..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Statut
               </label>
-              <Select value={statut} onChange={(e) => setStatut(e.target.value)}>
+              <Select
+                value={statut}
+                onChange={(e) => {
+                  setStatut(e.target.value);
+                  setPage(0);
+                }}
+              >
                 <option value="">Tous</option>
                 <option value="actif">Actif</option>
                 <option value="archive">Archivé</option>

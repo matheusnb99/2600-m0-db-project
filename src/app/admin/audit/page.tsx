@@ -19,41 +19,38 @@ export default function AuditPage() {
   const [filterTable, setFilterTable] = useState<string>("");
   const [filterAlerts, setFilterAlerts] = useState<boolean>(false);
   const [searchAgent, setSearchAgent] = useState<string>("");
+  const [exporting, setExporting] = useState(false);
 
   // action / table / alerte are filtered server-side (paginated); the agent-id
   // search stays client-side on the current page.
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
-    apiClient
-      .fetchAudit({
-        action: filterAction || undefined,
-        table: filterTable || undefined,
-        alerte: filterAlerts ? "true" : undefined,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
-      })
-      .then((data) => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiClient.fetchAudit({
+          action: filterAction || undefined,
+          table: filterTable || undefined,
+          alerte: filterAlerts ? "true" : undefined,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        });
         if (!active) return;
         const rows = data as (AuditLog & { total_count?: number })[];
         setLogs(rows);
         setTotal(rows[0]?.total_count ?? 0);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (active) setError((err as ApiError).message || "Erreur de chargement");
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    };
+    load();
     return () => {
       active = false;
     };
   }, [filterAction, filterTable, filterAlerts, page]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [filterAction, filterTable, filterAlerts]);
 
   const severityLabels = {
     0: "Info",
@@ -93,6 +90,74 @@ export default function AuditPage() {
     (log) => !searchAgent || log.agent_id?.includes(searchAgent)
   );
 
+  // Export the WHOLE filtered result set (not just the current page) to CSV.
+  // Re-fetches with the active server-side filters and a high limit, applies the
+  // client-side agent search, then triggers a browser download. The audit_log
+  // is REVOKE'd from UPDATE/DELETE, so this read-only export is the only egress.
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const rows = (await apiClient.fetchAudit({
+        action: filterAction || undefined,
+        table: filterTable || undefined,
+        alerte: filterAlerts ? "true" : undefined,
+        limit: 10000,
+        offset: 0,
+      })) as (AuditLog & { total_count?: number })[];
+
+      const data = rows.filter(
+        (log) => !searchAgent || log.agent_id?.includes(searchAgent)
+      );
+
+      const columns = [
+        "horodatage",
+        "agent_id",
+        "action",
+        "table_cible",
+        "severite",
+        "alerte",
+        "type_alerte",
+        "details",
+      ] as const;
+
+      const escape = (v: unknown) => {
+        const s =
+          v == null
+            ? ""
+            : typeof v === "object"
+              ? JSON.stringify(v)
+              : String(v);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+
+      const csv = [
+        columns.join(","),
+        ...data.map((row) =>
+          columns
+            .map((c) => escape((row as unknown as Record<string, unknown>)[c]))
+            .join(",")
+        ),
+      ].join("\r\n");
+
+      // BOM so Excel reads UTF-8 accents correctly.
+      const blob = new Blob(["﻿" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError((err as ApiError).message || "Échec de l'export");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Page-local counts (this page of results).
   const alertCount = logs.filter((l) => l.alerte).length;
   const criticalCount = logs.filter((l) => l.severite >= 4).length;
@@ -103,9 +168,15 @@ export default function AuditPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            Journal d'audit centralisé
+            Journal d&apos;audit centralisé
           </h1>
-          <Button variant="primary">📥 Exporter logs</Button>
+          <Button
+            variant="primary"
+            onClick={handleExport}
+            disabled={exporting || loading}
+          >
+            {exporting ? "Export…" : "📥 Exporter logs"}
+          </Button>
         </div>
 
         {/* Stats */}
@@ -148,7 +219,10 @@ export default function AuditPage() {
               </label>
               <Select
                 value={filterAction}
-                onChange={(e) => setFilterAction(e.target.value)}
+                onChange={(e) => {
+                  setFilterAction(e.target.value);
+                  setPage(0);
+                }}
               >
                 <option value="">Toutes</option>
                 {actions.map((action) => (
@@ -164,7 +238,10 @@ export default function AuditPage() {
               </label>
               <Select
                 value={filterTable}
-                onChange={(e) => setFilterTable(e.target.value)}
+                onChange={(e) => {
+                  setFilterTable(e.target.value);
+                  setPage(0);
+                }}
               >
                 <option value="">Toutes</option>
                 {tables.map((table) => (
@@ -189,7 +266,10 @@ export default function AuditPage() {
                 <input
                   type="checkbox"
                   checked={filterAlerts}
-                  onChange={(e) => setFilterAlerts(e.target.checked)}
+                  onChange={(e) => {
+                    setFilterAlerts(e.target.checked);
+                    setPage(0);
+                  }}
                   className="w-4 h-4 rounded"
                 />
                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">

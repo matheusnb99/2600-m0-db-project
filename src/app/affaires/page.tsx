@@ -9,8 +9,17 @@ import { usePermissions } from "@/lib/use-permissions";
 
 const PAGE_SIZE = 25;
 
+interface AffaireRow {
+  id: number;
+  numero_pv: string;
+  lieu_faits: string | null;
+  date_ouverture: string;
+  statut: string;
+  total_count?: number;
+}
+
 export default function AffairesPage() {
-  const [affaires, setAffaires] = useState<any[]>([]);
+  const [affaires, setAffaires] = useState<AffaireRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -29,7 +38,7 @@ export default function AffairesPage() {
           statut,
           limit: PAGE_SIZE,
           offset: page * PAGE_SIZE,
-        })) as any[];
+        })) as AffaireRow[];
         setAffaires(data);
         setTotal(data[0]?.total_count ?? 0);
       } catch (err) {
@@ -42,10 +51,6 @@ export default function AffairesPage() {
     const timer = setTimeout(fetchAffaires, 300);
     return () => clearTimeout(timer);
   }, [search, statut, page]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [search, statut]);
 
   const statutLabels: Record<string, string> = {
     en_cours: "En cours",
@@ -86,14 +91,23 @@ export default function AffairesPage() {
               <Input
                 placeholder="Numéro PV, lieu, description..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Statut
               </label>
-              <Select value={statut} onChange={(e) => setStatut(e.target.value)}>
+              <Select
+                value={statut}
+                onChange={(e) => {
+                  setStatut(e.target.value);
+                  setPage(0);
+                }}
+              >
                 <option value="">Tous</option>
                 <option value="en_cours">En cours</option>
                 <option value="cloturee">Clôturée</option>

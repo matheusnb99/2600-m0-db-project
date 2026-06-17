@@ -35,7 +35,7 @@ export async function comparePassword(
  * Generate JWT token
  * For production, use jsonwebtoken package
  */
-export function generateToken(payload: Record<string, any>): string {
+export function generateToken(payload: Record<string, unknown>): string {
   // This is a mock implementation
   // In production, use:
   // import jwt from 'jsonwebtoken';
@@ -57,7 +57,7 @@ export function generateToken(payload: Record<string, any>): string {
  * Verify JWT token
  * For production, use jsonwebtoken package
  */
-export function verifyToken(token: string): Record<string, any> | null {
+export function verifyToken(token: string): Record<string, unknown> | null {
   try {
     const [header, body, signature] = token.split(".");
 

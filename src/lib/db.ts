@@ -89,25 +89,25 @@ export function getAuthPool(): pg.Pool {
  * Run a query on the privileged auth pool (no RLS session context). Use only
  * for the authentication endpoint.
  */
-export async function authQuery<T = any>(
+export async function authQuery<T = unknown>(
   text: string,
-  params: any[] = []
+  params: unknown[] = []
 ): Promise<T[]> {
   const result = await getAuthPool().query(text, params);
   return result.rows;
 }
 
-export async function authQueryOne<T = any>(
+export async function authQueryOne<T = unknown>(
   text: string,
-  params: any[] = []
+  params: unknown[] = []
 ): Promise<T | null> {
   const results = await authQuery<T>(text, params);
   return results.length > 0 ? results[0] : null;
 }
 
-export async function query<T = any>(
+export async function query<T = unknown>(
   text: string,
-  params: any[] = [],
+  params: unknown[] = [],
   session?: SessionContext | null
 ): Promise<T[]> {
   const client = await getPool().connect();
@@ -142,9 +142,9 @@ export async function query<T = any>(
   }
 }
 
-export async function queryOne<T = any>(
+export async function queryOne<T = unknown>(
   text: string,
-  params: any[] = [],
+  params: unknown[] = [],
   session?: SessionContext | null
 ): Promise<T | null> {
   const results = await query<T>(text, params, session);

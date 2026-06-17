@@ -5,8 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { centralLoginUrl } from "@/lib/auth-url";
-import { ROLE_NAMES, roleById } from "@/lib/roles";
+import {
+  ROLE_NAMES,
+  roleById,
+  navItemsForRole,
+  canAccessPath,
+  NAV_ITEMS,
+} from "@/lib/roles";
 import { Forbidden } from "@/components/Forbidden";
+import { NotAuthorized } from "@/components/ui";
 
 /** Map a Bell-LaPadula level (0..3) to its classification code. */
 const NIVEAU_LABELS: Record<string, string> = {
@@ -50,18 +57,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     logout();
   };
 
-  const navigationItems = [
-    { href: "/dashboard", label: "Tableau de bord", icon: "📊" },
-    { href: "/personnes", label: "Personnes", icon: "🧑" },
-    { href: "/affaires", label: "Affaires", icon: "📂" },
-    { href: "/signalements", label: "Signalements", icon: "🚨" },
-    { href: "/admin/agents", label: "Agents", icon: "👤" },
-    { href: "/admin/services", label: "Services", icon: "🏢" },
-    { href: "/admin/roles", label: "Rôles", icon: "🔐" },
-    { href: "/admin/audit", label: "Audit", icon: "📋" },
-    { href: "/conformite", label: "Vues anonymisées", icon: "🛡️" },
-  ];
-
   const isActive = (href: string) => pathname === href;
 
   const niveau = whoami?.session_level ?? null;
@@ -93,6 +88,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Page-level RBAC: even on the correct microservice, a role only sees the
+  // sections its GRANTs justify (db_scripts/07). Filter the nav AND gate the
+  // page body, so a direct URL is refused — not merely hidden from the menu.
+  const navItems = navItemsForRole(agentRole?.nom);
+  const allowedHere = canAccessPath(agentRole?.nom, pathname);
+
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-black">
       {/* Sidebar */}
@@ -118,7 +119,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {navigationItems.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -153,7 +154,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-8 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-              {navigationItems.find((i) => isActive(i.href))?.label || "Dashboard"}
+              {NAV_ITEMS.find((i) => isActive(i.href))?.label || "Dashboard"}
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -202,7 +203,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
         {/* Page content */}
         <main className="flex-1 overflow-auto p-8">
-          {children}
+          {allowedHere ? children : <NotAuthorized roleLabel={agentRole?.label} />}
         </main>
       </div>
     </div>

@@ -133,7 +133,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Remove password hash from response
-    const { mot_de_passe_hash, ...agentSafe } = agent as Record<string, any>;
+    const agentSafe = { ...agent } as Partial<Agent & { mot_de_passe_hash: string }>;
+    delete agentSafe.mot_de_passe_hash;
 
     const session: AuthSession = {
       agent: agentSafe as Agent,

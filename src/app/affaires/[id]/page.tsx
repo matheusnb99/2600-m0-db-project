@@ -1,25 +1,71 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Card, Badge, Button } from "@/components/ui";
 import { AdminLayout } from "@/components/AdminLayout";
 import { apiClient, type ApiError } from "@/lib/api-client";
+import { usePermissions } from "@/lib/use-permissions";
+
+interface AffaireInfo {
+  numero_pv: string;
+  date_ouverture: string;
+  date_faits: string | null;
+  statut: string;
+  lieu_faits: string | null;
+  description: string | null;
+}
+interface AffairePerson {
+  id: number;
+  prenom: string;
+  nom: string;
+  numero_taj: string;
+  role: string;
+}
+interface AffaireInfraction {
+  id: number;
+  code_natinf: string;
+  libelle: string;
+  categorie: string;
+}
+interface AffaireDecision {
+  id: number;
+  type: string;
+  date_decision: string;
+  juridiction: string;
+  peine: string | null;
+}
+interface AffaireEvidence {
+  id: number;
+  numero_scelle: string;
+  description: string;
+  statut: string;
+}
+interface AffaireDetail {
+  affaire: AffaireInfo;
+  people: AffairePerson[];
+  infractions: AffaireInfraction[];
+  decisions: AffaireDecision[];
+  evidence: AffaireEvidence[];
+}
 
 export default function AffaireDetailPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AffaireDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Only roles that may UPDATE affaires (agent_saisie, opj, magistrat) see
+  // "Éditer"; analyste_renseignement has SELECT only.
+  const perms = usePermissions();
 
   useEffect(() => {
     const fetchAffaire = async () => {
       try {
         setLoading(true);
         const affaire = await apiClient.fetchAffaire(id);
-        setData(affaire);
+        setData(affaire as AffaireDetail);
       } catch (err) {
         setError((err as ApiError).message || "Erreur de chargement");
       } finally {
@@ -48,7 +94,7 @@ export default function AffaireDetailPage() {
       </AdminLayout>
     );
 
-  const { affaire, people, infractions, decisions, evidence, vehicles } = data;
+  const { affaire, people, infractions, decisions, evidence } = data;
 
   const roleLabels: Record<string, string> = {
     victime: "Victime",
@@ -77,7 +123,9 @@ export default function AffaireDetailPage() {
               Ouvert le {new Date(affaire.date_ouverture).toLocaleDateString("fr-FR")}
             </p>
           </div>
-          <Button variant="secondary">Éditer</Button>
+          {perms?.update?.affaires && (
+            <Button variant="secondary">Éditer</Button>
+          )}
         </div>
 
         {/* Main Info */}
@@ -117,7 +165,7 @@ export default function AffaireDetailPage() {
               👥 Personnes impliquées ({people.length})
             </h3>
             <div className="space-y-3">
-              {people.map((person: any) => (
+              {people.map((person) => (
                 <div key={person.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded flex items-start justify-between">
                   <div>
                     <p className="font-medium text-zinc-900 dark:text-white">
@@ -141,7 +189,7 @@ export default function AffaireDetailPage() {
               ⚖️ Infractions ({infractions.length})
             </h3>
             <div className="space-y-2">
-              {infractions.map((inf: any) => (
+              {infractions.map((inf) => (
                 <div key={inf.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
                   <p className="font-medium text-zinc-900 dark:text-white">
                     {inf.code_natinf} — {inf.libelle}
@@ -162,7 +210,7 @@ export default function AffaireDetailPage() {
               📋 Décisions de justice ({decisions.length})
             </h3>
             <div className="space-y-3">
-              {decisions.map((dec: any) => (
+              {decisions.map((dec) => (
                 <div key={dec.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
                   <p className="font-medium text-zinc-900 dark:text-white">
                     {dec.type}
@@ -186,7 +234,7 @@ export default function AffaireDetailPage() {
               🔒 Pièces à conviction ({evidence.length})
             </h3>
             <div className="space-y-2">
-              {evidence.map((e: any) => (
+              {evidence.map((e) => (
                 <div key={e.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded">
                   <div className="flex items-start justify-between">
                     <div>
