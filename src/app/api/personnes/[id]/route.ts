@@ -154,8 +154,11 @@ export async function PUT(
       statut,
     } = body;
 
+    const session = getSessionContext(request);
+    const id = (await params).id;
+
     const updated = await queryOne(
-      `UPDATE personnes 
+      `UPDATE personnes
        SET nom = COALESCE($1, nom),
            prenom = COALESCE($2, prenom),
            date_naissance = COALESCE($3, date_naissance),
@@ -177,12 +180,34 @@ export async function PUT(
         sexe,
         niveau_classification_id,
         statut,
-        (await params).id,
+        id,
       ],
-      getSessionContext(request)
+      session
     );
 
     if (!updated) {
+      // 0 rows updated: either the person genuinely doesn't exist, or it exists
+      // but its classification ≠ the current session level. Writing requires
+      // session level = row classification (Bell-LaPadula « pas d'écriture vers
+      // le bas »), so the UPDATE's RLS policy hid an otherwise-readable row.
+      const visible = await queryOne<{ classif: string }>(
+        `SELECT cn.code AS classif
+         FROM personnes p
+         JOIN classification_niveaux cn ON cn.id = p.niveau_classification_id
+         WHERE p.id = $1`,
+        [id],
+        session
+      );
+
+      if (visible) {
+        return NextResponse.json(
+          {
+            message: `Modification refusée : cette fiche est classée ${visible.classif}. Pour l'éditer, réglez votre niveau de session de travail sur ${visible.classif} (sélecteur « Session » en haut) — règle Bell-LaPadula : on n'écrit qu'à son niveau exact.`,
+          },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
         { message: "Personne non trouvée" },
         { status: 404 }
